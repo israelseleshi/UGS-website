@@ -200,24 +200,24 @@ html {
   max-width: 100% !important;
   margin-left: 0 !important;
   margin-right: 0 !important;
-  padding-left: 1rem;   /* ~16px */
-  padding-right: 1rem;
+  padding-left: 1rem !important;   /* ~16px */
+  padding-right: 1rem !important;
 }
 
 @media (min-width: 640px) { /* sm */
-  .app-shell main > div:not(.pointer-events-none) { padding-left: 1.25rem; padding-right: 1.25rem; }
+  .app-shell main > div:not(.pointer-events-none) { padding-left: 1.25rem !important; padding-right: 1.25rem !important; }
 }
 @media (min-width: 768px) { /* md */
-  .app-shell main > div:not(.pointer-events-none) { padding-left: 1.5rem; padding-right: 1.5rem; }
+  .app-shell main > div:not(.pointer-events-none) { padding-left: 1.5rem !important; padding-right: 1.5rem !important; }
 }
 @media (min-width: 1024px) { /* lg */
-  .app-shell main > div:not(.pointer-events-none) { padding-left: 2rem; padding-right: 2rem; }
+  .app-shell main > div:not(.pointer-events-none) { padding-left: 2rem !important; padding-right: 2rem !important; }
 }
 @media (min-width: 1280px) { /* xl */
-  .app-shell main > div:not(.pointer-events-none) { padding-left: 2.5rem; padding-right: 2.5rem; }
+  .app-shell main > div:not(.pointer-events-none) { padding-left: 2.5rem !important; padding-right: 2.5rem !important; }
 }
 @media (min-width: 1536px) { /* 2xl */
-  .app-shell main > div:not(.pointer-events-none) { padding-left: 3rem; padding-right: 3rem; }
+  .app-shell main > div:not(.pointer-events-none) { padding-left: 1rem !important; padding-right: 1rem !important; }
 }
 
 /* Expand common max-width wrappers inside main to full width */
