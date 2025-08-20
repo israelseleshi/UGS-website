@@ -1,0 +1,11 @@
+/* Import globals FIRST */
+@import "./components/globals.css";
+
+/* Tailwind layers */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* App-wide theme variables and resets live in globals.css */
+
+/* App-wide theme variables and resets */
