@@ -93,7 +93,6 @@ export async function upsertUser(user: Partial<UserDoc> & { uid: string }) {
   await setDoc(
     ref,
     {
-      role: "user",
       createdAt: serverTimestamp(),
       ...user,
       lastLoginAt: serverTimestamp(),

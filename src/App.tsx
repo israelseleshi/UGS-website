@@ -9,6 +9,7 @@ import { AllenAI } from './components/AllenAI';
 import { ServiceRequest } from './components/ServiceRequest';
 import { AdminDashboard } from './components/AdminDashboard';
 import { ClientDashboard } from './components/ClientDashboard';
+import { VerifyEmail } from './components/VerifyEmail';
 import { Card, CardContent, CardHeader, CardTitle } from './components/card';
 import { Button } from './components/button';
 import { ImageWithFallback } from './components/ImageWithFallback';
@@ -32,7 +33,7 @@ export default function App() {
   const [theme, setTheme] = useState<AppTheme>(() => readTheme());
   const [isAdmin, setIsAdmin] = useState(false);
   const [isClient, setIsClient] = useState(false);
-  const { user } = useAuth();
+  const { user, signOutUser } = useAuth();
 
   // Theme management
   useEffect(() => {
@@ -46,27 +47,50 @@ export default function App() {
     return () => window.removeEventListener('themechange', onChange as EventListener);
   }, []);
 
-  // Auto-route on auth state (only when landing from auth pages)
+  // Auto-route on auth state using email verification and custom claims
   useEffect(() => {
-    if (user) {
-      const email = user.email?.toLowerCase();
-      const isAuthPage = ['signin', 'signup', 'home'].includes(currentPage);
-      if (email === 'admin@ugsdesk.com') {
-        setIsAdmin(true);
+    let cancelled = false;
+    (async () => {
+      if (!user) {
+        setIsAdmin(false);
         setIsClient(false);
-        if (isAuthPage) setCurrentPage('admin-dashboard');
-        // Seed base collections on first admin login
-        ensureBaseCollections().catch(console.warn);
-      } else {
+        return;
+      }
+
+      // Gate unverified users to VerifyEmail page
+      if (!user.emailVerified) {
+        setIsAdmin(false);
+        setIsClient(false);
+        setCurrentPage('verify-email');
+        return;
+      }
+
+      try {
+        const token = await user.getIdTokenResult();
+        if (cancelled) return;
+        const role = (token.claims?.role as string) || 'client';
+        const isAuthPage = ['signin', 'signup', 'home', 'verify-email'].includes(currentPage);
+        if (role === 'admin') {
+          setIsAdmin(true);
+          setIsClient(false);
+          if (isAuthPage) setCurrentPage('admin-dashboard');
+          // Seed base collections on first admin login
+          ensureBaseCollections().catch(console.warn);
+        } else {
+          setIsClient(true);
+          setIsAdmin(false);
+          if (isAuthPage) setCurrentPage('client-dashboard');
+        }
+      } catch (e) {
+        // Fallback to client
         setIsClient(true);
         setIsAdmin(false);
-        if (isAuthPage) setCurrentPage('client-dashboard');
       }
-    } else {
-      setIsAdmin(false);
-      setIsClient(false);
-    }
-  }, [user]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, currentPage]);
 
   useEffect(() => {
     writeTheme(theme);
@@ -96,13 +120,17 @@ export default function App() {
     setCurrentPage('client-dashboard');
   };
 
-  const handleAdminLogout = () => {
+  const handleAdminLogout = async () => {
+    try { await signOutUser(); } catch {}
     setIsAdmin(false);
+    setIsClient(false);
     setCurrentPage('home');
   };
 
-  const handleClientLogout = () => {
+  const handleClientLogout = async () => {
+    try { await signOutUser(); } catch {}
     setIsClient(false);
+    setIsAdmin(false);
     setCurrentPage('home');
   };
 
@@ -458,6 +486,7 @@ export default function App() {
       'signin': <AuthPages type="signin" onPageChange={setCurrentPage} onAdminLogin={handleAdminLogin} onUserLogin={handleUserLogin} />,
       'signup': <AuthPages type="signup" onPageChange={setCurrentPage} onUserLogin={handleUserLogin} />,
       'request': <ServiceRequest onPageChange={setCurrentPage} />,
+      'verify-email': <VerifyEmail onPageChange={setCurrentPage} />,
       'admin-dashboard': <AdminDashboard onPageChange={setCurrentPage} onLogout={handleAdminLogout} />,
       'client-dashboard': <ClientDashboard onPageChange={setCurrentPage} onLogout={handleClientLogout} />
     };

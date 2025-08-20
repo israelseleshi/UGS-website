@@ -111,7 +111,7 @@ export function VisaEdPage({ onPageChange }: VisaEdPageProps) {
     <div className="min-h-screen">
       {/* Hero Section */}
       <section className="py-20 bg-gradient-to-br from-blue-50 via-background to-indigo-50/30 dark:from-blue-950/20 dark:via-background dark:to-indigo-950/10">
-        <div className="container mx-auto px-4">
+        <div className="w-full section-inner">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-8">
               <div className="space-y-6">
@@ -179,7 +179,7 @@ export function VisaEdPage({ onPageChange }: VisaEdPageProps) {
 
       {/* Features Section */}
       <section className="py-20">
-        <div className="container mx-auto px-4">
+        <div className="w-full section-inner">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Why Choose VisaEd?</h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
@@ -205,7 +205,7 @@ export function VisaEdPage({ onPageChange }: VisaEdPageProps) {
 
       {/* Courses Section */}
       <section className="py-20 bg-muted/30">
-        <div className="container mx-auto px-4">
+        <div className="w-full section-inner">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Popular Courses</h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
@@ -258,7 +258,7 @@ export function VisaEdPage({ onPageChange }: VisaEdPageProps) {
 
       {/* Registration Form Section */}
       <section className="py-20" id="register">
-        <div className="container mx-auto px-4">
+        <div className="w-full section-inner">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12">
               <h2 className="text-3xl md:text-4xl font-bold mb-4">Register for VisaEd</h2>

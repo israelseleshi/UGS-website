@@ -75,6 +75,8 @@ import {
   Moon,
 } from "lucide-react";
 import { getTheme as readTheme, toggleTheme as flipTheme, type AppTheme } from "./theme";
+import { useAuth } from "../lib/auth";
+import { getUser, listUserApplications, upsertUser } from "../lib/db";
 
 interface ClientDashboardProps {
   onPageChange: (page: string) => void;
@@ -88,6 +90,7 @@ export function ClientDashboard({
   const [selectedTab, setSelectedTab] = useState("overview");
   const [notifications, setNotifications] = useState(3);
   const [theme, setTheme] = useState<AppTheme>(readTheme());
+  const { user } = useAuth();
 
   React.useEffect(() => {
     const onChange = (e: Event) => {
@@ -98,57 +101,108 @@ export function ClientDashboard({
     return () => window.removeEventListener('themechange', onChange as EventListener);
   }, []);
 
-  // Mock client data
-  const clientData = {
-    name: "John Doe",
-    email: "user@gmail.com",
-    phone: "+1 (555) 123-4567",
-    memberSince: "2023",
-    status: "Premium Member",
-    profileImage: null,
-  };
+  // Firestore-backed client data
+  const [clientData, setClientData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    memberSince: "",
+    status: "Member",
+    profileImage: null as string | null,
+  });
 
-  const applications = [
-    {
-      id: "APP-2024-001",
-      type: "Tourist Visa",
-      country: "United States",
-      status: "Processing",
-      submittedDate: "2024-01-15",
-      expectedDate: "2024-02-15",
-      progress: 65,
-      documents: 8,
-      amount: "$299",
-      priority: "Standard",
-      officer: "Sarah Johnson",
-    },
-    {
-      id: "APP-2024-002",
-      type: "Student Visa",
-      country: "Canada",
-      status: "Approved",
-      submittedDate: "2023-12-10",
-      expectedDate: "2024-01-10",
-      progress: 100,
-      documents: 12,
-      amount: "$599",
-      priority: "Express",
-      officer: "Michael Chen",
-    },
-    {
-      id: "APP-2024-003",
-      type: "Work Visa",
-      country: "Australia",
-      status: "Under Review",
-      submittedDate: "2024-01-20",
-      expectedDate: "2024-03-20",
-      progress: 30,
-      documents: 6,
-      amount: "$899",
-      priority: "Priority",
-      officer: "Emily Watson",
-    },
-  ];
+  const [applications, setApplications] = useState<any[]>([]);
+
+  React.useEffect(() => {
+    let ignore = false;
+    async function load() {
+      if (!user) return;
+      try {
+        // Load profile
+        let udoc = await getUser(user.uid);
+        if (!udoc) {
+          try {
+            await upsertUser({ uid: user.uid, email: user.email ?? null } as any);
+            udoc = await getUser(user.uid);
+          } catch {}
+        }
+        const createdAt = (udoc as any)?.createdAt?.toDate?.() as Date | undefined;
+        const memberSince = createdAt ? String(createdAt.getFullYear()) : "";
+        const displayName = user.displayName || (udoc as any)?.fullName || (udoc as any)?.name;
+        const phone = (udoc as any)?.phone || (udoc as any)?.phoneNumber || "";
+        if (!ignore) {
+          setClientData({
+            name: displayName || (user.email ? user.email.split("@")[0] : "User"),
+            email: user.email || "",
+            phone,
+            memberSince,
+            status: user.emailVerified ? "Verified Member" : "Unverified",
+            profileImage: null,
+          });
+        }
+
+        // Load applications for this user
+        try {
+          const { items } = await listUserApplications(user.uid, 20);
+          const mapped = (items || []).map((it: any) => ({
+            id: it.id,
+            type: it?.travel?.purpose || "Visa Application",
+            country: it?.travel?.destination || "—",
+            status: mapStatusToDisplay(it?.status),
+            submittedDate: formatDate(it?.createdAt),
+            expectedDate: "",
+            progress: statusToProgress(it?.status),
+            documents: 0,
+            amount: "",
+            priority: "Standard",
+            officer: "",
+          }));
+          if (!ignore) setApplications(mapped);
+        } catch {
+          // If listing fails (e.g., rules), leave as empty
+          if (!ignore) setApplications([]);
+        }
+      } catch {
+        // ignore errors and keep defaults
+      }
+    }
+    load();
+    return () => {
+      ignore = true;
+    };
+  }, [user]);
+
+  function formatDate(ts: any): string {
+    try {
+      const d: Date | undefined = ts?.toDate?.();
+      if (!d) return "";
+      return d.toISOString().slice(0, 10);
+    } catch {
+      return "";
+    }
+  }
+
+  function mapStatusToDisplay(s: string | undefined): string {
+    switch (s) {
+      case "approved": return "Approved";
+      case "in_review": return "Under Review";
+      case "submitted": return "Processing";
+      case "rejected": return "Rejected";
+      case "draft":
+      default: return "Draft";
+    }
+  }
+
+  function statusToProgress(s: string | undefined): number {
+    switch (s) {
+      case "approved": return 100;
+      case "in_review": return 50;
+      case "submitted": return 25;
+      case "rejected": return 100;
+      case "draft":
+      default: return 10;
+    }
+  }
 
   const documents = [
     {
@@ -250,8 +304,8 @@ export function ClientDashboard({
         animate={{ opacity: 1, y: 0 }}
         className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 dark:bg-gray-950/80 border-b border-white/20 dark:border-gray-800/50"
       >
-        <div className="container mx-auto px-6">
-          <div className="flex items-center justify-between h-20">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-10">
+          <div className="flex flex-wrap items-center justify-between gap-3 h-20">
             {/* Left side - Logo and greeting */}
             <div className="flex items-center space-x-6">
               <motion.div
@@ -353,7 +407,7 @@ export function ClientDashboard({
       </motion.div>
 
       {/* Main Content */}
-      <div className="container mx-auto px-6 py-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-10 py-8 lg:py-12">
         <Tabs
           value={selectedTab}
           onValueChange={setSelectedTab}
@@ -365,7 +419,7 @@ export function ClientDashboard({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <TabsList className="grid w-full max-w-4xl mx-auto grid-cols-6 p-1 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl rounded-2xl">
+            <TabsList className="grid w-full max-w-6xl mx-auto p-2 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl rounded-2xl overflow-x-auto whitespace-nowrap [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden grid-flow-col auto-cols-max sm:grid-flow-row sm:auto-cols-auto sm:grid-cols-6">
               <TabsTrigger
                 value="overview"
                 className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-500 data-[state=active]:to-pink-500 data-[state=active]:text-white rounded-xl transition-all duration-300"
@@ -415,7 +469,7 @@ export function ClientDashboard({
             >
               <Card className="relative overflow-hidden bg-gradient-to-br from-red-500 via-pink-500 to-orange-500 text-white border-0 shadow-2xl">
                 <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent" />
-                <CardContent className="relative p-8">
+                <CardContent className="relative p-8 lg:p-12">
                   <div className="flex items-center justify-between">
                     <div className="space-y-4">
                       <div className="flex items-center space-x-3">
@@ -430,7 +484,7 @@ export function ClientDashboard({
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-6 text-sm">
+                      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
                         <div className="flex items-center space-x-2">
                           <Sparkles className="w-4 h-4" />
                           <span>
@@ -469,7 +523,7 @@ export function ClientDashboard({
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10"
             >
               {[
                 {
@@ -510,7 +564,7 @@ export function ClientDashboard({
                   }}
                 >
                   <Card className="relative overflow-hidden bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl">
-                    <CardContent className="p-6">
+                    <CardContent className="p-6 lg:p-8">
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
@@ -562,7 +616,7 @@ export function ClientDashboard({
                       Track your visa application progress
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-6">
+                  <CardContent className="space-y-6 lg:space-y-8">
                     {applications
                       .slice(0, 3)
                       .map((app, index) => (
@@ -572,9 +626,9 @@ export function ClientDashboard({
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.1 * index }}
                           whileHover={{ scale: 1.02 }}
-                          className="p-4 rounded-xl bg-gradient-to-r from-white to-gray-50 dark:from-gray-800 dark:to-gray-700 border border-white/50 dark:border-gray-700/50 shadow-lg"
+                          className="p-5 md:p-6 rounded-xl bg-gradient-to-r from-white to-gray-50 dark:from-gray-800 dark:to-gray-700 border border-white/50 dark:border-gray-700/50 shadow-lg"
                         >
-                          <div className="flex items-center justify-between mb-4">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                             <div className="flex items-center space-x-3">
                               <div className="w-10 h-10 bg-gradient-to-r from-red-500 to-pink-500 rounded-lg flex items-center justify-center">
                                 <Plane className="w-5 h-5 text-white" />
@@ -597,7 +651,7 @@ export function ClientDashboard({
                             </Badge>
                           </div>
 
-                          <div className="space-y-2">
+                          <div className="space-y-3">
                             <div className="flex justify-between text-sm">
                               <span>Progress</span>
                               <span>{app.progress}%</span>
@@ -608,7 +662,7 @@ export function ClientDashboard({
                             />
                           </div>
 
-                          <div className="flex items-center justify-between mt-4 text-sm text-gray-600 dark:text-gray-400">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-5 text-sm text-gray-600 dark:text-gray-400">
                             <span>
                               Expected: {app.expectedDate}
                             </span>
@@ -626,7 +680,7 @@ export function ClientDashboard({
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.5 }}
-                className="space-y-6"
+                className="space-y-6 lg:space-y-8"
               >
                 {/* Recent Activity */}
                 <Card className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl">

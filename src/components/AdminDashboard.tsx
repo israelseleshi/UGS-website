@@ -169,7 +169,7 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
         {/* Admin quick actions */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
           <div className="text-sm text-muted-foreground">Admin Tools</div>
           <div className="flex gap-2">
             <Button
@@ -197,7 +197,7 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
           </div>
         </div>
         <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6 bg-transparent p-0 gap-2">
+          <TabsList className="grid w-full bg-transparent p-0 gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden grid-flow-col auto-cols-max sm:grid-flow-row sm:auto-cols-auto sm:grid-cols-6">
             <TabsTrigger value="overview" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-500 data-[state=active]:to-pink-500 data-[state=active]:text-white shadow-sm hover:shadow transition-all">Overview</TabsTrigger>
             <TabsTrigger value="applications" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-500 data-[state=active]:to-pink-500 data-[state=active]:text-white shadow-sm hover:shadow transition-all">Applications</TabsTrigger>
             <TabsTrigger value="users" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-500 data-[state=active]:to-pink-500 data-[state=active]:text-white shadow-sm hover:shadow transition-all">Users</TabsTrigger>
@@ -383,7 +383,7 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
               <CardContent>
                 <div className="space-y-4">
                   {recentApplications.map((app, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div key={index} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border rounded-lg">
                       <div className="flex items-center space-x-4">
                         <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
                           <FileText className="w-5 h-5" />

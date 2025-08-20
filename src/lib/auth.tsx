@@ -8,8 +8,9 @@ import {
   sendEmailVerification,
   reload,
 } from "firebase/auth";
+import { httpsCallable } from "firebase/functions";
 import type { User } from "firebase/auth";
-import { auth, db, googleProvider, isFirebaseConfigured } from "./firebase";
+import { auth, db, googleProvider, isFirebaseConfigured, functions } from "./firebase";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 
 export type AppUser = User | null;
@@ -23,6 +24,8 @@ export type AuthContextType = {
   signInWithGoogle: () => Promise<void>;
   signOutUser: () => Promise<void>;
   resendVerification: () => Promise<void>;
+  requestOtp: () => Promise<void>;
+  verifyOtp: (code: string) => Promise<void>;
 };
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
@@ -32,15 +35,18 @@ async function ensureUserDoc(user: User) {
   const ref = doc(db, "users", user.uid);
   const snap = await getDoc(ref);
   if (!snap.exists()) {
+    // Do not set 'role' on create to comply with Firestore rules
     await setDoc(ref, {
       uid: user.uid,
       email: user.email ?? null,
-      role: (user.email?.toLowerCase() === "admin@ugsdesk.com") ? "admin" : "user",
       createdAt: serverTimestamp(),
       lastLoginAt: serverTimestamp(),
     });
   } else {
-    await setDoc(ref, { lastLoginAt: serverTimestamp() }, { merge: true });
+    // Only update lastLoginAt if the user's email is verified to satisfy rules
+    if (user.emailVerified) {
+      await setDoc(ref, { lastLoginAt: serverTimestamp() }, { merge: true });
+    }
   }
 }
 
@@ -87,13 +93,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     try {
       if (!isFirebaseConfigured || !auth) throw new Error("Service is temporarily unavailable. Please try again shortly.");
+      if (!email.toLowerCase().endsWith("@gmail.com")) {
+        throw new Error("Please use a valid gmail.com address.");
+      }
       const cred = await signInWithEmailAndPassword(auth, email, password);
-      // Enforce email verification
-      const isAdmin = cred.user?.email?.toLowerCase() === "admin@ugsdesk.com";
-      if (cred.user && !cred.user.emailVerified && !isAdmin) {
+      // If not verified, send verification email but keep the user signed in so Verify page can poll
+      if (cred.user && !cred.user.emailVerified) {
         try { await sendEmailVerification(cred.user); } catch {}
-        await signOut(auth);
-        throw new Error("Please verify your email. We've sent a new verification link.");
+        // Do not sign out; App.tsx will route to 'verify-email'
       }
     } catch (e: any) {
       const msg = friendlyAuthMessage(e);
@@ -106,11 +113,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     try {
       if (!isFirebaseConfigured || !auth) throw new Error("Service is temporarily unavailable. Please try again shortly.");
+      const lower = email.toLowerCase();
+      if (!lower.endsWith("@gmail.com")) {
+        throw new Error("Only gmail.com addresses are allowed for sign up.");
+      }
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       if (cred.user && db) await ensureUserDoc(cred.user);
       if (cred.user) {
         try { await sendEmailVerification(cred.user); } catch {}
-        try { await reload(cred.user); } catch {}
       }
     } catch (e: any) {
       const msg = friendlyAuthMessage(e);
@@ -120,17 +130,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [friendlyAuthMessage]);
 
   const signInWithGoogleCb = React.useCallback(async () => {
-    setError(null);
-    try {
-      if (!isFirebaseConfigured || !auth || !googleProvider) throw new Error("Service is temporarily unavailable. Please try again shortly.");
-      const res = await signInWithPopup(auth, googleProvider);
-      if (res.user && db) await ensureUserDoc(res.user);
-    } catch (e: any) {
-      const msg = friendlyAuthMessage(e);
-      setError(msg);
-      throw new Error(msg);
-    }
-  }, [friendlyAuthMessage]);
+    // Disabled per product requirements (email/password with Gmail only)
+    throw new Error("Google sign-in is disabled. Please sign in with your Gmail and password.");
+  }, []);
 
   const signOutUser = React.useCallback(async () => {
     setError(null);
@@ -142,13 +144,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     if (!isFirebaseConfigured || !auth) throw new Error("Auth not configured");
     const u = auth.currentUser;
-    if (!u) throw new Error("No signed-in user");
+    if (!u) throw new Error("Not signed in");
     await sendEmailVerification(u);
   }, []);
 
+  const requestOtp = React.useCallback(async () => {
+    // Backwards-compat: treat as resend verification email
+    if (!isFirebaseConfigured || !auth) throw new Error("Auth not configured");
+    const u = auth.currentUser;
+    if (!u) throw new Error("Not signed in");
+    await sendEmailVerification(u);
+  }, []);
+
+  const verifyOtp = React.useCallback(async (_code: string) => {
+    // Backwards-compat: just reload and let App route once email is verified via link
+    if (!isFirebaseConfigured || !auth) throw new Error("Auth not configured");
+    const u = auth.currentUser;
+    if (!u) throw new Error("Not signed in");
+    await reload(u);
+    await u.getIdToken(true);
+    if (!u.emailVerified) throw new Error("Email is not verified yet. Please click the link in your email, then try again.");
+  }, []);
+
   const value: AuthContextType = React.useMemo(
-    () => ({ user, loading, error, signInWithEmail, signUpWithEmail, signInWithGoogle: signInWithGoogleCb, signOutUser, resendVerification }),
-    [user, loading, error, signInWithEmail, signUpWithEmail, signInWithGoogleCb, signOutUser, resendVerification]
+    () => ({ user, loading, error, signInWithEmail, signUpWithEmail, signInWithGoogle: signInWithGoogleCb, signOutUser, resendVerification, requestOtp, verifyOtp }),
+    [user, loading, error, signInWithEmail, signUpWithEmail, signInWithGoogleCb, signOutUser, resendVerification, requestOtp, verifyOtp]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

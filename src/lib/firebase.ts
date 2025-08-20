@@ -1,6 +1,8 @@
+const functionsRegion = (import.meta.env.VITE_FIREBASE_FUNCTIONS_REGION as string | undefined) || "us-central1";
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { getFunctions } from "firebase/functions";
 
 // Config via Vite env vars. Ensure these are set in .env.local and Netlify env.
 const apiKey = import.meta.env.VITE_FIREBASE_API_KEY as string | undefined;
@@ -43,6 +45,7 @@ if (isFirebaseConfigured) {
 export const auth = app ? getAuth(app) : undefined;
 export const googleProvider = app ? new GoogleAuthProvider() : undefined;
 export const db = app ? getFirestore(app) : undefined;
+export const functions = app ? getFunctions(app, functionsRegion) : undefined;
 
 // Optional: connect to emulators in dev (uncomment if you enable emulators)
 // import { connectAuthEmulator } from "firebase/auth";

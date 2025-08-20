@@ -1,0 +1,64 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      // Admins are identified by role field in their user doc
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Users collection: users can read their own doc when verified.
+    match /users/{uid} {
+      allow read: if isVerified() && request.auth.uid == uid || isAdmin();
+      // Creation allowed for signed-in user to create their own doc without role changes
+      allow create: if isSignedIn() && request.auth.uid == uid;
+      // Updates: user can update their own non-privileged fields when signed in; prevent role escalation
+      allow update: if (
+        (
+          isSignedIn() && request.auth.uid == uid &&
+          // Non-admins cannot write 'role'
+          !("role" in request.resource.data.diff(resource.data).affectedKeys())
+        )
+      ) || isAdmin();
+      // Deletes restricted to admin (or the user can delete their own if desired; keep admin-only for safety)
+      allow delete: if isAdmin();
+    }
+
+    // Visa applications: owner CRUD when verified; admin full access
+    match /visaApplications/{appId} {
+      allow read: if isVerified() && resource.data.uid == request.auth.uid || isAdmin();
+      allow create: if isVerified() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if (
+        isVerified() && request.resource.data.uid == request.auth.uid
+      ) || isAdmin();
+    }
+
+    // Documents uploaded per user (if you use a separate collection)
+    match /documents/{docId} {
+      allow read: if isVerified() && resource.data.uid == request.auth.uid || isAdmin();
+      allow create: if isVerified() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if (
+        isVerified() && request.resource.data.uid == request.auth.uid
+      ) || isAdmin();
+    }
+
+    // Settings: read-only to verified users; write admin only
+    match /settings/{doc} {
+      allow read: if isVerified() || isAdmin();
+      allow write: if isAdmin();
+    }
+  }
+}

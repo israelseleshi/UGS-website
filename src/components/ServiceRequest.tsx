@@ -638,7 +638,7 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 via-background to-orange-50/30 dark:from-red-950/10 dark:via-background dark:to-orange-950/5">
-      <div className="container mx-auto px-4 py-8">
+      <div className="w-full section-inner py-8">
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl md:text-4xl font-bold mb-2">Visa Service Request</h1>
