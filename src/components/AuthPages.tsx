@@ -35,6 +35,7 @@ interface AuthPagesProps {
 export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: AuthPagesProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
+  const [infoMessage, setInfoMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     firstName: '',
@@ -47,7 +48,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
     newsletterOptIn: false
   });
 
-  const { signInWithEmail, signUpWithEmail, signInWithGoogle, error: authError, loading: authLoading, user } = useAuth();
+  const { signInWithEmail, signUpWithEmail, signInWithGoogle, error: authError, loading: authLoading } = useAuth();
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -57,6 +58,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
+    setInfoMessage('');
     setIsLoading(true);
 
     try {
@@ -75,6 +77,27 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
       }
     } catch (err: any) {
       setLoginError(err?.message || 'Authentication failed');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    setInfoMessage('');
+    setLoginError('');
+    setIsLoading(true);
+    try {
+      // Re-attempt sign-in to trigger verification email send in auth.tsx
+      await signInWithEmail(formData.email, formData.password);
+      setInfoMessage('Verified successfully. Redirecting...');
+      onUserLogin?.();
+    } catch (err: any) {
+      const msg = err?.message || '';
+      if (msg.toLowerCase().includes('verify your email')) {
+        setInfoMessage('Verification email sent again. Please check your inbox and spam folder.');
+      } else {
+        setLoginError(msg || 'Could not resend verification');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -170,7 +193,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
             </CardHeader>
 
             <CardContent className="px-0">
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-7">
 
                 {/* Error Message */}
                 <AnimatePresence>
@@ -184,6 +207,31 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                       <div className="flex items-center space-x-3">
                         <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
                         <p className="text-sm text-red-800 dark:text-red-200">{loginError || authError}</p>
+                      </div>
+                      {/* Resend verification helper */}
+                      {type === 'signin' && (loginError.toLowerCase().includes('verify your email')) && (
+                        <div className="mt-3 flex items-center justify-between">
+                          <p className="text-xs text-red-700 dark:text-red-300">Haven't received the email?</p>
+                          <Button type="button" variant="outline" size="sm" className="border-red-300 text-red-700 dark:text-red-300" onClick={handleResendVerification} disabled={isLoading || authLoading}>
+                            Resend verification
+                          </Button>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <AnimatePresence>
+                  {infoMessage && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-4"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+                        <p className="text-sm text-emerald-800 dark:text-emerald-200">{infoMessage}</p>
                       </div>
                     </motion.div>
                   )}

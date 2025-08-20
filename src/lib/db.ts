@@ -27,6 +27,42 @@ export type UserDoc = {
   lastLoginAt?: any;
 };
 
+function getDb() {
+  if (!db) throw new Error("Firestore not configured");
+  return db;
+}
+
+// Ensure base collections exist by writing a placeholder doc
+export async function ensureBaseCollections() {
+  if (!db) return; // silent no-op when not configured
+  const now = serverTimestamp();
+  const placeholders: Array<[string, string, Record<string, any>]> = [
+    ["users", "_seed", { _type: "seed", createdAt: now }],
+    ["visaApplications", "_seed", { _type: "seed", createdAt: now }],
+    ["documents", "_seed", { _type: "seed", createdAt: now }],
+    ["payments", "_seed", { _type: "seed", createdAt: now }],
+    ["messages", "_seed", { _type: "seed", createdAt: now }],
+    ["audits", "_seed", { _type: "seed", createdAt: now }],
+  ];
+  // settings has a meaningful root doc
+  const settingsRef = doc(getDb(), "settings", "app");
+  const settingsSnap = await getDoc(settingsRef);
+  if (!settingsSnap.exists()) {
+    await setDoc(settingsRef, {
+      createdAt: now,
+      brand: { name: "United Global Services" },
+      features: { googleAuth: true },
+    });
+  }
+  for (const [col, id, data] of placeholders) {
+    const ref = doc(getDb(), col, id);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      await setDoc(ref, data, { merge: true });
+    }
+  }
+}
+
 export type VisaApplication = {
   uid: string;
   status: "draft" | "submitted" | "in_review" | "approved" | "rejected";
@@ -47,13 +83,13 @@ export type VisaApplication = {
 
 // Users
 export async function getUser(uid: string) {
-  const ref = doc(db, "users", uid);
+  const ref = doc(getDb(), "users", uid);
   const snap = await getDoc(ref);
   return snap.exists() ? (snap.data() as UserDoc) : null;
 }
 
 export async function upsertUser(user: Partial<UserDoc> & { uid: string }) {
-  const ref = doc(db, "users", user.uid);
+  const ref = doc(getDb(), "users", user.uid);
   await setDoc(
     ref,
     {
@@ -68,7 +104,7 @@ export async function upsertUser(user: Partial<UserDoc> & { uid: string }) {
 
 // Visa Applications
 export async function createVisaApplication(uid: string, data: Partial<VisaApplication> = {}) {
-  const colRef = collection(db, "visaApplications");
+  const colRef = collection(getDb(), "visaApplications");
   const docRef = await addDoc(colRef, {
     uid,
     status: "draft",
@@ -81,24 +117,24 @@ export async function createVisaApplication(uid: string, data: Partial<VisaAppli
 }
 
 export async function updateVisaApplication(appId: string, data: Partial<VisaApplication>) {
-  const ref = doc(db, "visaApplications", appId);
+  const ref = doc(getDb(), "visaApplications", appId);
   await updateDoc(ref, { ...data, updatedAt: serverTimestamp() });
 }
 
 export async function deleteVisaApplication(appId: string) {
-  const ref = doc(db, "visaApplications", appId);
+  const ref = doc(getDb(), "visaApplications", appId);
   await deleteDoc(ref);
 }
 
 export async function getVisaApplication(appId: string) {
-  const ref = doc(db, "visaApplications", appId);
+  const ref = doc(getDb(), "visaApplications", appId);
   const snap = await getDoc(ref);
   return snap.exists() ? ({ id: appId, ...(snap.data() as VisaApplication) }) : null;
 }
 
 export async function listUserApplications(uid: string, pageSize = 20, cursor?: QueryDocumentSnapshot) {
   const baseQuery = query(
-    collection(db, "visaApplications"),
+    collection(getDb(), "visaApplications"),
     where("uid", "==", uid),
     orderBy("createdAt", "desc"),
     limit(pageSize),

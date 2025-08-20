@@ -22,6 +22,7 @@ export type AuthContextType = {
   signUpWithEmail: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOutUser: () => Promise<void>;
+  resendVerification: () => Promise<void>;
 };
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
@@ -106,9 +107,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await signOut(auth);
   }, []);
 
+  const resendVerification = React.useCallback(async () => {
+    setError(null);
+    if (!isFirebaseConfigured || !auth) throw new Error("Auth not configured");
+    const u = auth.currentUser;
+    if (!u) throw new Error("No signed-in user");
+    await sendEmailVerification(u);
+  }, []);
+
   const value: AuthContextType = React.useMemo(
-    () => ({ user, loading, error, signInWithEmail, signUpWithEmail, signInWithGoogle: signInWithGoogleCb, signOutUser }),
-    [user, loading, error, signInWithEmail, signUpWithEmail, signInWithGoogleCb, signOutUser]
+    () => ({ user, loading, error, signInWithEmail, signUpWithEmail, signInWithGoogle: signInWithGoogleCb, signOutUser, resendVerification }),
+    [user, loading, error, signInWithEmail, signUpWithEmail, signInWithGoogleCb, signOutUser, resendVerification]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -24,6 +24,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { useAuth } from './lib/auth';
+import { ensureBaseCollections } from './lib/db';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -52,6 +53,8 @@ export default function App() {
         setIsAdmin(true);
         setIsClient(false);
         setCurrentPage('admin-dashboard');
+        // Seed base collections on first admin login
+        ensureBaseCollections().catch(console.warn);
       } else {
         setIsClient(true);
         setIsAdmin(false);
