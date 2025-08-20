@@ -23,6 +23,7 @@ import {
   Crown,
   Star
 } from 'lucide-react';
+import { useAuth } from '../lib/auth';
 
 interface AuthPagesProps {
   type: 'signin' | 'signup';
@@ -46,6 +47,8 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
     newsletterOptIn: false
   });
 
+  const { signInWithEmail, signUpWithEmail, signInWithGoogle, error: authError, loading: authLoading, user } = useAuth();
+
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (loginError) setLoginError('');
@@ -56,31 +59,24 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
     setLoginError('');
     setIsLoading(true);
 
-    // Simulate loading delay for better UX
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    if (type === 'signin') {
-      // Regular user login simulation (no demo accounts)
-      if (formData.email && formData.password) {
-        console.log('User login successful:', { email: formData.email });
-        setIsLoading(false);
-        if (onUserLogin) {
-          onUserLogin();
+    try {
+      if (type === 'signin') {
+        if (!formData.email || !formData.password) throw new Error('Please enter valid credentials');
+        await signInWithEmail(formData.email, formData.password);
+        if (formData.email.toLowerCase() === 'admin@ugsdesk.com') {
+          onAdminLogin?.();
+        } else {
+          onUserLogin?.();
         }
       } else {
-        setLoginError('Please enter valid credentials');
-        setIsLoading(false);
-      }
-    } else {
-      // Sign up logic
-      if (formData.agreeToTerms) {
-        console.log('User registration:', formData);
-        setIsLoading(false);
+        if (!formData.agreeToTerms) throw new Error('Please agree to the terms and conditions');
+        await signUpWithEmail(formData.email, formData.password);
         onPageChange('signin');
-      } else {
-        setLoginError('Please agree to the terms and conditions');
-        setIsLoading(false);
       }
+    } catch (err: any) {
+      setLoginError(err?.message || 'Authentication failed');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -161,10 +157,10 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
               >
-                <CardTitle className="text-3xl bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+                <CardTitle className="text-4xl md:text-5xl tracking-tight bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
                   {type === 'signin' ? 'Welcome back' : 'Join our premium community'}
                 </CardTitle>
-                <CardDescription className="text-base mt-2">
+                <CardDescription className="text-lg md:text-xl mt-3 text-muted-foreground">
                   {type === 'signin' 
                     ? 'Sign in to access your luxury visa portal'
                     : 'Experience world-class visa and immigration services'
@@ -178,7 +174,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
 
                 {/* Error Message */}
                 <AnimatePresence>
-                  {loginError && (
+                  {(loginError || authError) && (
                     <motion.div
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -187,7 +183,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                     >
                       <div className="flex items-center space-x-3">
                         <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
-                        <p className="text-sm text-red-800 dark:text-red-200">{loginError}</p>
+                        <p className="text-sm text-red-800 dark:text-red-200">{loginError || authError}</p>
                       </div>
                     </motion.div>
                   )}
@@ -407,9 +403,9 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                     type="submit" 
                     className="w-full bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 shadow-lg" 
                     size="lg"
-                    disabled={isLoading}
+                    disabled={isLoading || authLoading}
                   >
-                    {isLoading ? (
+                    {isLoading || authLoading ? (
                       <motion.div
                         animate={{ rotate: 360 }}
                         transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
@@ -440,7 +436,18 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                   className="grid grid-cols-2 gap-4"
                 >
                   <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                    <Button variant="outline" type="button" className="w-full bg-white/50 dark:bg-gray-800/50 border-white/20 dark:border-gray-700/20 backdrop-blur-sm">
+                    <Button variant="outline" type="button" className="w-full bg-white/50 dark:bg-gray-800/50 border-white/20 dark:border-gray-700/20 backdrop-blur-sm" onClick={async () => {
+                      setLoginError('');
+                      setIsLoading(true);
+                      try {
+                        await signInWithGoogle();
+                        onUserLogin?.();
+                      } catch (err: any) {
+                        setLoginError(err?.message || 'Google sign-in failed');
+                      } finally {
+                        setIsLoading(false);
+                      }
+                    }}>
                       <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
                         <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                         <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>

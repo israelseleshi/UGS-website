@@ -23,12 +23,14 @@ import {
   CheckCircle,
   ArrowRight
 } from 'lucide-react';
+import { useAuth } from './lib/auth';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('home');
   const [theme, setTheme] = useState<AppTheme>(() => readTheme());
   const [isAdmin, setIsAdmin] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const { user } = useAuth();
 
   // Theme management
   useEffect(() => {
@@ -41,6 +43,25 @@ export default function App() {
     window.addEventListener('themechange', onChange as EventListener);
     return () => window.removeEventListener('themechange', onChange as EventListener);
   }, []);
+
+  // Auto-route on auth state
+  useEffect(() => {
+    if (user) {
+      const email = user.email?.toLowerCase();
+      if (email === 'admin@ugsdesk.com') {
+        setIsAdmin(true);
+        setIsClient(false);
+        setCurrentPage('admin-dashboard');
+      } else {
+        setIsClient(true);
+        setIsAdmin(false);
+        setCurrentPage('client-dashboard');
+      }
+    } else {
+      setIsAdmin(false);
+      setIsClient(false);
+    }
+  }, [user]);
 
   useEffect(() => {
     writeTheme(theme);
