@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './car
 import { Button } from './button';
 import { Badge } from './badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs';
+import { Popover, PopoverContent, PopoverTrigger } from './popover';
 import { Avatar, AvatarFallback, AvatarImage } from './avatar';
 import { Progress } from './progress';
 import { 
@@ -166,13 +167,13 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
         <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="applications">Applications</TabsTrigger>
-            <TabsTrigger value="users">Users</TabsTrigger>
-            <TabsTrigger value="visaed">VisaEd</TabsTrigger>
-            <TabsTrigger value="allen">Allen AI</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-6 bg-transparent p-0 gap-2">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-500 data-[state=active]:to-pink-500 data-[state=active]:text-white shadow-sm hover:shadow transition-all">Overview</TabsTrigger>
+            <TabsTrigger value="applications" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-500 data-[state=active]:to-pink-500 data-[state=active]:text-white shadow-sm hover:shadow transition-all">Applications</TabsTrigger>
+            <TabsTrigger value="users" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-500 data-[state=active]:to-pink-500 data-[state=active]:text-white shadow-sm hover:shadow transition-all">Users</TabsTrigger>
+            <TabsTrigger value="visaed" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-500 data-[state=active]:to-pink-500 data-[state=active]:text-white shadow-sm hover:shadow transition-all">VisaEd</TabsTrigger>
+            <TabsTrigger value="allen" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-500 data-[state=active]:to-pink-500 data-[state=active]:text-white shadow-sm hover:shadow transition-all">Allen AI</TabsTrigger>
+            <TabsTrigger value="analytics" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-500 data-[state=active]:to-pink-500 data-[state=active]:text-white shadow-sm hover:shadow transition-all">Analytics</TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
@@ -286,14 +287,61 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold">Application Management</h2>
               <div className="flex items-center space-x-2">
-                <Button variant="outline" size="sm">
-                  <Filter className="w-4 h-4 mr-2" />
-                  Filter
-                </Button>
-                <Button variant="outline" size="sm">
-                  <Search className="w-4 h-4 mr-2" />
-                  Search
-                </Button>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="hover:scale-[1.02] active:scale-95 transition-transform">
+                      <Filter className="w-4 h-4 mr-2" />
+                      Filter
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-64 space-y-3">
+                    <div>
+                      <p className="text-sm font-medium mb-2">Status</p>
+                      <div className="flex flex-wrap gap-2">
+                        {['Approved','Processing','Pending','Rejected'].map(s => (
+                          <Button key={s} variant="secondary" size="sm" className="px-2 py-1">{s}</Button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium mb-2">Country</p>
+                      <div className="grid grid-cols-3 gap-2 text-xs">
+                        {['USA','Canada','UK','Australia','Germany','France'].map(c => (
+                          <Button key={c} variant="ghost" className="h-7 px-2 justify-start">{c}</Button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <Button size="sm" className="bg-gradient-to-r from-red-500 to-pink-500">Apply</Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="hover:scale-[1.02] active:scale-95 transition-transform">
+                      <Search className="w-4 h-4 mr-2" />
+                      Search
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-80">
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-xs text-muted-foreground">Search by client, ID or service</label>
+                        <input className="mt-1 w-full bg-transparent border border-border rounded-md px-3 py-2 text-sm" placeholder="e.g. John Doe, APP-001, Work Visa" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button variant="secondary" className="justify-start">Clients</Button>
+                        <Button variant="secondary" className="justify-start">IDs</Button>
+                        <Button variant="secondary" className="justify-start">Services</Button>
+                        <Button variant="secondary" className="justify-start">Countries</Button>
+                      </div>
+                      <div className="flex justify-end">
+                        <Button size="sm" className="bg-gradient-to-r from-red-500 to-pink-500">Search</Button>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
 

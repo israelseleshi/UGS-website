@@ -49,6 +49,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
+  const friendlyAuthMessage = React.useCallback((err: any): string => {
+    const code: string | undefined = err?.code || (typeof err?.message === 'string' && err.message);
+    if (!isFirebaseConfigured || !auth) return "Service is temporarily unavailable. Please try again shortly.";
+    if (!code) return "Something went wrong. Please try again.";
+    const lower = String(code).toLowerCase();
+    if (lower.includes("network") || lower.includes("offline")) return "Please check your internet connection and try again.";
+    if (lower.includes("invalid-credential") || lower.includes("wrong-password") || lower.includes("user-not-found")) return "Email or password is incorrect.";
+    if (lower.includes("too-many-requests")) return "Too many attempts. Please wait a moment and try again.";
+    if (lower.includes("user-disabled")) return "This account has been disabled. Contact support for assistance.";
+    if (lower.includes("popup-closed")) return "The sign-in window was closed before completing. Please try again.";
+    if (lower.includes("cancelled") || lower.includes("canceled")) return "Operation cancelled.";
+    return "We couldn't complete the request. Please try again.";
+  }, []);
+
   React.useEffect(() => {
     if (!isFirebaseConfigured || !auth) {
       console.warn("Firebase not configured. Auth is disabled. Set VITE_FIREBASE_* env vars.");
@@ -71,35 +85,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithEmail = React.useCallback(async (email: string, password: string) => {
     setError(null);
-    if (!isFirebaseConfigured || !auth) throw new Error("Auth not configured");
-    const cred = await signInWithEmailAndPassword(auth, email, password);
-    // Enforce email verification
-    const isAdmin = cred.user?.email?.toLowerCase() === "admin@ugsdesk.com";
-    if (cred.user && !cred.user.emailVerified && !isAdmin) {
-      try { await sendEmailVerification(cred.user); } catch {}
-      await signOut(auth);
-      throw new Error("Please verify your email. A verification link has been sent.");
+    try {
+      if (!isFirebaseConfigured || !auth) throw new Error("Service is temporarily unavailable. Please try again shortly.");
+      const cred = await signInWithEmailAndPassword(auth, email, password);
+      // Enforce email verification
+      const isAdmin = cred.user?.email?.toLowerCase() === "admin@ugsdesk.com";
+      if (cred.user && !cred.user.emailVerified && !isAdmin) {
+        try { await sendEmailVerification(cred.user); } catch {}
+        await signOut(auth);
+        throw new Error("Please verify your email. We've sent a new verification link.");
+      }
+    } catch (e: any) {
+      const msg = friendlyAuthMessage(e);
+      setError(msg);
+      throw new Error(msg);
     }
-  }, []);
+  }, [friendlyAuthMessage]);
 
   const signUpWithEmail = React.useCallback(async (email: string, password: string) => {
     setError(null);
-    if (!isFirebaseConfigured || !auth) throw new Error("Auth not configured");
-    const cred = await createUserWithEmailAndPassword(auth, email, password);
-    if (cred.user && db) await ensureUserDoc(cred.user);
-    // Send verification email and keep user signed-in but blocked by sign-in guard
-    if (cred.user) {
-      try { await sendEmailVerification(cred.user); } catch {}
-      try { await reload(cred.user); } catch {}
+    try {
+      if (!isFirebaseConfigured || !auth) throw new Error("Service is temporarily unavailable. Please try again shortly.");
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      if (cred.user && db) await ensureUserDoc(cred.user);
+      if (cred.user) {
+        try { await sendEmailVerification(cred.user); } catch {}
+        try { await reload(cred.user); } catch {}
+      }
+    } catch (e: any) {
+      const msg = friendlyAuthMessage(e);
+      setError(msg);
+      throw new Error(msg);
     }
-  }, []);
+  }, [friendlyAuthMessage]);
 
   const signInWithGoogleCb = React.useCallback(async () => {
     setError(null);
-    if (!isFirebaseConfigured || !auth || !googleProvider) throw new Error("Auth not configured");
-    const res = await signInWithPopup(auth, googleProvider);
-    if (res.user && db) await ensureUserDoc(res.user);
-  }, []);
+    try {
+      if (!isFirebaseConfigured || !auth || !googleProvider) throw new Error("Service is temporarily unavailable. Please try again shortly.");
+      const res = await signInWithPopup(auth, googleProvider);
+      if (res.user && db) await ensureUserDoc(res.user);
+    } catch (e: any) {
+      const msg = friendlyAuthMessage(e);
+      setError(msg);
+      throw new Error(msg);
+    }
+  }, [friendlyAuthMessage]);
 
   const signOutUser = React.useCallback(async () => {
     setError(null);
