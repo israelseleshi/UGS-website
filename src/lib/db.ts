@@ -23,6 +23,13 @@ export type UserDoc = {
   uid: string;
   email: string | null;
   role: "user" | "admin";
+  // Profile fields collected at signup or later edits
+  firstName?: string;
+  lastName?: string;
+  fullName?: string;
+  phone?: string;
+  photoURL?: string | null;
+  // Audit
   createdAt?: any;
   lastLoginAt?: any;
 };
@@ -61,22 +68,69 @@ export async function ensureBaseCollections() {
       await setDoc(ref, data, { merge: true });
     }
   }
+
+  // Backfill default profile fields for existing users so the portal can render names/phone
+  try {
+    const usersSnap = await getDocs(collection(getDb(), "users"));
+    for (const d of usersSnap.docs) {
+      if (d.id === "_seed") continue;
+      const u = d.data() as UserDoc;
+      // Only set fields that are missing; don't overwrite existing data
+      const toSet: Partial<UserDoc> = {};
+      if (u.fullName === undefined && (u.firstName || u.lastName)) {
+        toSet.fullName = `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() || null as any;
+      }
+      if (u.firstName === undefined) toSet.firstName = "";
+      if (u.lastName === undefined) toSet.lastName = "";
+      if (u.fullName === undefined) toSet.fullName = "";
+      if (u.phone === undefined) toSet.phone = "";
+      if (u.photoURL === undefined) toSet.photoURL = null;
+      if (Object.keys(toSet).length > 0) {
+        await setDoc(doc(getDb(), "users", d.id), toSet, { merge: true });
+      }
+    }
+  } catch (e) {
+    // ignore seeding failures (may be blocked by rules if not admin)
+  }
 }
 
 export type VisaApplication = {
   uid: string;
+  userEmail?: string;
   status: "draft" | "submitted" | "in_review" | "approved" | "rejected";
-  applicant?: {
-    fullName?: string;
-    dob?: string;
+  priority?: "normal" | "medium" | "high";
+  estimatedCost?: number;
+  
+  personalInfo?: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    phone?: string;
+    dateOfBirth?: string;
     nationality?: string;
+    passportNumber?: string;
+    passportExpiry?: string;
   };
+  
   travel?: {
+    serviceType?: string;
     destination?: string;
     purpose?: string;
-    startDate?: string;
-    endDate?: string;
+    travelDate?: string;
+    returnDate?: string;
+    accommodation?: string;
+    previousVisaHistory?: string;
   };
+  
+  additionalInfo?: {
+    emergencyContact?: string;
+    emergencyPhone?: string;
+    specialRequirements?: string;
+    processingSpeed?: string;
+    consultationNeeded?: boolean;
+    documentReview?: boolean;
+  };
+  
   createdAt?: any;
   updatedAt?: any;
 };
@@ -143,4 +197,30 @@ export async function listUserApplications(uid: string, pageSize = 20, cursor?: 
   const items = snap.docs.map((d) => ({ id: d.id, ...(d.data() as VisaApplication) }));
   const nextCursor = snap.docs[snap.docs.length - 1];
   return { items, nextCursor };
+}
+
+// Admin function to list all applications
+export async function listAllApplications(pageSize = 50, cursor?: QueryDocumentSnapshot) {
+  const baseQuery = query(
+    collection(getDb(), "visaApplications"),
+    orderBy("createdAt", "desc"),
+    limit(pageSize),
+  );
+  const q = cursor ? query(baseQuery, startAfter(cursor)) : baseQuery;
+  const snap = await getDocs(q);
+  const items = snap.docs.map((d) => ({ id: d.id, ...(d.data() as VisaApplication) }));
+  const nextCursor = snap.docs[snap.docs.length - 1];
+  return { items, nextCursor };
+}
+
+// Submit a new visa application
+export async function submitVisaApplication(applicationData: Partial<VisaApplication>) {
+  const ref = collection(getDb(), "visaApplications");
+  const docRef = await addDoc(ref, {
+    ...applicationData,
+    status: 'submitted',
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  });
+  return docRef.id;
 }

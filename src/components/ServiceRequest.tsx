@@ -25,13 +25,18 @@ import {
   AlertCircle,
   DollarSign
 } from 'lucide-react';
+import { useAuth } from '../lib/auth';
+import { submitVisaApplication } from '../lib/db';
+import { toast } from 'sonner';
 
 interface ServiceRequestProps {
   onPageChange: (page: string) => void;
 }
 
 export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     // Personal Information
     firstName: '',
@@ -85,10 +90,97 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Service Request Submitted:', formData);
-    // Handle form submission
+    
+    if (!user) {
+      toast.error('Please sign in to submit a visa application');
+      onPageChange('signin');
+      return;
+    }
+
+    if (!formData.agreeToTerms || !formData.agreeToPrivacy) {
+      toast.error('Please agree to the terms and privacy policy');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const applicationId = await submitVisaApplication({
+        uid: user.uid,
+        userEmail: user.email || formData.email,
+        
+        // Personal Information
+        personalInfo: {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+          dateOfBirth: formData.dateOfBirth,
+          nationality: formData.nationality,
+          passportNumber: formData.passportNumber,
+          passportExpiry: formData.passportExpiry
+        },
+        
+        // Travel Details
+        travel: {
+          serviceType: formData.serviceType,
+          destination: formData.destinationCountry,
+          purpose: formData.purposeOfTravel,
+          travelDate: formData.travelDate,
+          returnDate: formData.returnDate,
+          accommodation: formData.accommodation,
+          previousVisaHistory: formData.previousVisaHistory
+        },
+        
+        // Additional Information
+        additionalInfo: {
+          emergencyContact: formData.emergencyContact,
+          emergencyPhone: formData.emergencyPhone,
+          specialRequirements: formData.specialRequirements,
+          processingSpeed: formData.processingSpeed,
+          consultationNeeded: formData.consultationNeeded,
+          documentReview: formData.documentReview
+        },
+        
+        // Calculated pricing
+        estimatedCost: calculateEstimatedCost(),
+        
+        // Status tracking
+        status: 'submitted',
+        priority: formData.processingSpeed === 'priority' ? 'high' : formData.processingSpeed === 'express' ? 'medium' : 'normal'
+      });
+      
+      toast.success('Visa application submitted successfully!');
+      toast.info('Our team will contact you within 24 hours to confirm details.');
+      
+      // Redirect to client dashboard or confirmation page
+      onPageChange('client-dashboard');
+      
+    } catch (error: any) {
+      console.error('Error submitting application:', error);
+      toast.error(error?.message || 'Failed to submit application. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  const calculateEstimatedCost = () => {
+    const serviceType = services.find(s => s.id === formData.serviceType);
+    let baseCost = 199; // Default base cost
+    
+    if (serviceType?.id === 'business') baseCost = 299;
+    else if (serviceType?.id === 'student') baseCost = 499;
+    else if (serviceType?.id === 'work') baseCost = 799;
+    else if (serviceType?.id === 'immigration') baseCost = 1299;
+    
+    let additionalCost = 0;
+    if (formData.processingSpeed === 'express') additionalCost += 199;
+    if (formData.processingSpeed === 'priority') additionalCost += 399;
+    if (formData.consultationNeeded) additionalCost += 99;
+    if (formData.documentReview) additionalCost += 149;
+    
+    return baseCost + additionalCost;
   };
 
   const services = [
@@ -684,11 +776,11 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
                   {currentStep === 4 ? (
                     <Button 
                       type="submit"
-                      disabled={!formData.agreeToTerms || !formData.agreeToPrivacy}
+                      disabled={!formData.agreeToTerms || !formData.agreeToPrivacy || isSubmitting}
                       className="flex items-center"
                     >
                       <CheckCircle className="w-4 h-4 mr-2" />
-                      Submit Request
+                      {isSubmitting ? 'Submitting...' : 'Submit Request'}
                     </Button>
                   ) : (
                     <Button 

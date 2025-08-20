@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from './button';
-import { Moon, Sun, Globe, Menu, X } from 'lucide-react';
+import { Moon, Sun, Globe, Menu, X, User, LogOut } from 'lucide-react';
+import { useAuth } from '../lib/auth';
 
 interface HeaderProps {
   currentPage: string;
@@ -11,6 +12,7 @@ interface HeaderProps {
 
 export function Header({ currentPage, onPageChange, theme, onThemeChange }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  const { user, signOutUser } = useAuth();
 
   const navigation = [
     { name: 'Home', id: 'home' },
@@ -22,7 +24,7 @@ export function Header({ currentPage, onPageChange, theme, onThemeChange }: Head
 
   return (
     <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border">
-      <div className="container mx-auto px-4">
+      <div className="container mx-auto px-6 sm:px-8 lg:px-12">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex items-center space-x-3">
@@ -65,21 +67,47 @@ export function Header({ currentPage, onPageChange, theme, onThemeChange }: Head
               <Moon className={`w-4 h-4 transition-opacity absolute ${theme === 'dark' ? 'opacity-0' : 'opacity-100'}`} />
             </Button>
             
-            <div className="hidden sm:flex space-x-2">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => onPageChange('signin')}
-              >
-                Sign In
-              </Button>
-              <Button 
-                size="sm"
-                onClick={() => onPageChange('signup')}
-              >
-                Get Started
-              </Button>
-            </div>
+            {user ? (
+              <div className="hidden sm:flex items-center space-x-3">
+                <div className="flex items-center space-x-2 px-3 py-1.5 bg-green-50 dark:bg-green-950/20 rounded-full border border-green-200 dark:border-green-800">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm text-green-700 dark:text-green-300 font-medium">
+                    {user.displayName || user.email?.split('@')[0] || 'User'}
+                  </span>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => onPageChange(user.emailVerified ? 'client-dashboard' : 'verify-email')}
+                >
+                  <User className="w-4 h-4 mr-1" />
+                  Dashboard
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={signOutUser}
+                >
+                  <LogOut className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="hidden sm:flex space-x-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => onPageChange('signin')}
+                >
+                  Sign In
+                </Button>
+                <Button 
+                  size="sm"
+                  onClick={() => onPageChange('signup')}
+                >
+                  Get Started
+                </Button>
+              </div>
+            )}
 
             {/* Mobile menu button */}
             <Button
@@ -113,29 +141,64 @@ export function Header({ currentPage, onPageChange, theme, onThemeChange }: Head
                   {item.name}
                 </button>
               ))}
-              <div className="flex space-x-2 px-4 pt-3 border-t border-border">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="flex-1"
-                  onClick={() => {
-                    onPageChange('signin');
-                    setMobileMenuOpen(false);
-                  }}
-                >
-                  Sign In
-                </Button>
-                <Button 
-                  size="sm" 
-                  className="flex-1"
-                  onClick={() => {
-                    onPageChange('signup');
-                    setMobileMenuOpen(false);
-                  }}
-                >
-                  Get Started
-                </Button>
-              </div>
+              {user ? (
+                <div className="px-4 pt-3 border-t border-border space-y-2">
+                  <div className="flex items-center space-x-2 p-2 bg-green-50 dark:bg-green-950/20 rounded-lg">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span className="text-sm text-green-700 dark:text-green-300 font-medium">
+                      {user.displayName || user.email?.split('@')[0] || 'User'}
+                    </span>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full"
+                    onClick={() => {
+                      onPageChange(user.emailVerified ? 'client-dashboard' : 'verify-email');
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    <User className="w-4 h-4 mr-2" />
+                    Dashboard
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="w-full"
+                    onClick={() => {
+                      signOutUser();
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign Out
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex space-x-2 px-4 pt-3 border-t border-border">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={() => {
+                      onPageChange('signin');
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    Sign In
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={() => {
+                      onPageChange('signup');
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    Get Started
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         )}

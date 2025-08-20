@@ -47,7 +47,7 @@ export default function App() {
     return () => window.removeEventListener('themechange', onChange as EventListener);
   }, []);
 
-  // Auto-route on auth state using email verification and custom claims
+  // Auto-route on auth state using custom claims; admins bypass email verification
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -56,27 +56,29 @@ export default function App() {
         setIsClient(false);
         return;
       }
-
-      // Gate unverified users to VerifyEmail page
-      if (!user.emailVerified) {
-        setIsAdmin(false);
-        setIsClient(false);
-        setCurrentPage('verify-email');
-        return;
-      }
-
       try {
         const token = await user.getIdTokenResult();
         if (cancelled) return;
         const role = (token.claims?.role as string) || 'client';
-        const isAuthPage = ['signin', 'signup', 'home', 'verify-email'].includes(currentPage);
-        if (role === 'admin') {
+        const email = (user.email || '').toLowerCase();
+        const isWhitelistedAdmin = ['admin@ugsdesk.com'].includes(email);
+        // Treat only real auth-related pages as auth pages; allow 'home' to be reachable
+        const isAuthPage = ['signin', 'signup', 'verify-email'].includes(currentPage);
+        if (role === 'admin' || isWhitelistedAdmin) {
+          // Admins do NOT require email verification
           setIsAdmin(true);
           setIsClient(false);
           if (isAuthPage) setCurrentPage('admin-dashboard');
           // Seed base collections on first admin login
           ensureBaseCollections().catch(console.warn);
         } else {
+          // Non-admins must verify email before accessing dashboards
+          if (!user.emailVerified) {
+            setIsAdmin(false);
+            setIsClient(false);
+            setCurrentPage('verify-email');
+            return;
+          }
           setIsClient(true);
           setIsAdmin(false);
           if (isAuthPage) setCurrentPage('client-dashboard');

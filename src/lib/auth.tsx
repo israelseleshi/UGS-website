@@ -62,6 +62,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const lower = String(code).toLowerCase();
     if (lower.includes("network") || lower.includes("offline")) return "Please check your internet connection and try again.";
     if (lower.includes("invalid-credential") || lower.includes("wrong-password") || lower.includes("user-not-found")) return "Email or password is incorrect.";
+    if (lower.includes("email-already-in-use")) return "An account already exists with this email. Try signing in instead.";
+    if (lower.includes("weak-password")) return "Password is too weak. Use at least 6 characters.";
+    if (lower.includes("invalid-email")) return "Please enter a valid email address.";
+    if (lower.includes("missing-password")) return "Please enter a password.";
+    if (lower.includes("operation-not-allowed")) return "Email/password sign-in is not enabled in Firebase Auth settings.";
     if (lower.includes("too-many-requests")) return "Too many attempts. Please wait a moment and try again.";
     if (lower.includes("user-disabled")) return "This account has been disabled. Contact support for assistance.";
     if (lower.includes("popup-closed")) return "The sign-in window was closed before completing. Please try again.";
@@ -93,15 +98,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     try {
       if (!isFirebaseConfigured || !auth) throw new Error("Service is temporarily unavailable. Please try again shortly.");
-      if (!email.toLowerCase().endsWith("@gmail.com")) {
-        throw new Error("Please use a valid gmail.com address.");
-      }
       const cred = await signInWithEmailAndPassword(auth, email, password);
-      // If not verified, send verification email but keep the user signed in so Verify page can poll
-      if (cred.user && !cred.user.emailVerified) {
-        try { await sendEmailVerification(cred.user); } catch {}
-        // Do not sign out; App.tsx will route to 'verify-email'
-      }
+      // After sign-in, check custom claims; only non-admins are asked to verify.
+      // Whitelist admin email in case claims aren't set yet.
+      try {
+        const token = await cred.user.getIdTokenResult(true);
+        const role = (token.claims?.role as string) || 'client';
+        const userEmail = (cred.user.email || '').toLowerCase();
+        const isWhitelistedAdmin = ['admin@ugsdesk.com'].includes(userEmail);
+        if (role !== 'admin' && !isWhitelistedAdmin && !cred.user.emailVerified) {
+          try { await sendEmailVerification(cred.user); } catch {}
+          // Do not sign out; App.tsx will route non-admins to 'verify-email'
+        }
+      } catch {}
     } catch (e: any) {
       const msg = friendlyAuthMessage(e);
       setError(msg);
@@ -113,10 +122,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     try {
       if (!isFirebaseConfigured || !auth) throw new Error("Service is temporarily unavailable. Please try again shortly.");
-      const lower = email.toLowerCase();
-      if (!lower.endsWith("@gmail.com")) {
-        throw new Error("Only gmail.com addresses are allowed for sign up.");
-      }
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       if (cred.user && db) await ensureUserDoc(cred.user);
       if (cred.user) {

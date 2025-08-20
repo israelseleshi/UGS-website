@@ -128,7 +128,12 @@ export function ClientDashboard({
         }
         const createdAt = (udoc as any)?.createdAt?.toDate?.() as Date | undefined;
         const memberSince = createdAt ? String(createdAt.getFullYear()) : "";
-        const displayName = user.displayName || (udoc as any)?.fullName || (udoc as any)?.name;
+        const fullFromParts = `${(udoc as any)?.firstName ?? ""} ${(udoc as any)?.lastName ?? ""}`.trim();
+        const displayName =
+          user.displayName ||
+          (udoc as any)?.fullName ||
+          (fullFromParts || undefined) ||
+          (udoc as any)?.name;
         const phone = (udoc as any)?.phone || (udoc as any)?.phoneNumber || "";
         if (!ignore) {
           setClientData({
@@ -304,7 +309,7 @@ export function ClientDashboard({
         animate={{ opacity: 1, y: 0 }}
         className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 dark:bg-gray-950/80 border-b border-white/20 dark:border-gray-800/50"
       >
-        <div className="container mx-auto px-4 sm:px-6 lg:px-10">
+        <div className="container mx-auto px-6 sm:px-8 lg:px-12">
           <div className="flex flex-wrap items-center justify-between gap-3 h-20">
             {/* Left side - Logo and greeting */}
             <div className="flex items-center space-x-6">
@@ -343,6 +348,25 @@ export function ClientDashboard({
               <Button variant="ghost" size="sm" onClick={() => setTheme(flipTheme())} className="relative w-9 h-9 p-0">
                 <Sun className={`w-4 h-4 transition-opacity ${theme === 'dark' ? 'opacity-100' : 'opacity-0'}`} />
                 <Moon className={`w-4 h-4 transition-opacity absolute ${theme === 'dark' ? 'opacity-0' : 'opacity-100'}`} />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onPageChange('home')}
+                className="hidden sm:flex"
+              >
+                <Home className="w-4 h-4 mr-2" />
+                Back to Website
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onPageChange('home')}
+                className="sm:hidden w-9 h-9 p-0"
+                aria-label="Back to website"
+                title="Back to website"
+              >
+                <Home className="w-4 h-4" />
               </Button>
               <motion.div
                 whileHover={{ scale: 1.05 }}
@@ -407,7 +431,7 @@ export function ClientDashboard({
       </motion.div>
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 sm:px-6 lg:px-10 py-8 lg:py-12">
+      <div className="container mx-auto px-6 sm:px-8 lg:px-12 pt-10 pb-12 lg:pt-14 lg:pb-16">
         <Tabs
           value={selectedTab}
           onValueChange={setSelectedTab}

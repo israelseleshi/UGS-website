@@ -64,12 +64,12 @@ export function HomePage({ onPageChange }: HomePageProps) {
   return (
   <div className="min-h-screen bg-hero-diagonal relative">
       {/* Hero Section */}
-      <section className="relative pt-24 pb-24 md:pt-28 md:pb-32 overflow-hidden">
+      <section className="relative min-h-[calc(100vh-5rem)] py-16 md:py-20 flex items-center overflow-hidden">
         {/* layered subtle gradients */}
         <div className="pointer-events-none absolute inset-0 bg-hero-radial" />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-transparent dark:from-primary/20 dark:via-background dark:to-transparent" />
         <div className="pointer-events-none absolute -right-40 top-1/3 h-[600px] w-[600px] rounded-full bg-gradient-to-tr from-primary/20 to-transparent blur-3xl opacity-50 dark:opacity-40" />
-        <div className="relative z-10 w-full section-inner">
+        <div className="relative z-10 container mx-auto px-6 sm:px-8 lg:px-12">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="space-y-8">
               <div className="space-y-6">
@@ -151,8 +151,8 @@ export function HomePage({ onPageChange }: HomePageProps) {
       </section>
 
       {/* Stats Section */}
-      <section className="relative py-16 md:py-20 border-y border-border/60 bg-background/60">
-        <div className="relative w-full section-inner">
+      <section className="relative py-12 md:py-16 border-y border-border/60 bg-background/60">
+        <div className="relative container mx-auto px-6 sm:px-8 lg:px-12">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-10 lg:gap-16">
             {stats.map((stat, index) => (
               <div key={index} className="text-center space-y-3">
@@ -168,8 +168,8 @@ export function HomePage({ onPageChange }: HomePageProps) {
       </section>
 
       {/* Services Section */}
-      <section className="py-24">
-        <div className="w-full section-inner">
+      <section className="py-16 md:py-20">
+        <div className="container mx-auto px-6 sm:px-8 lg:px-12">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Our Services</h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
@@ -227,10 +227,10 @@ export function HomePage({ onPageChange }: HomePageProps) {
       </section>
 
       {/* CTA Section */}
-      <section className="relative py-28 overflow-hidden">
+      <section className="relative py-20 md:py-24 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-red-500 via-red-600 to-red-700" />
         <div className="absolute inset-0 opacity-40 mix-blend-overlay bg-[radial-gradient(circle_at_20%_20%,white_.5%,transparent_60%)]" />
-        <div className="relative w-full section-inner text-center">
+        <div className="relative container mx-auto px-6 sm:px-8 lg:px-12 text-center">
           <div className="space-y-10 text-white">
             <h2 className="text-3xl md:text-4xl font-bold">Ready to Begin Your Journey?</h2>
             <p className="text-xl opacity-90 max-w-3xl mx-auto leading-relaxed">

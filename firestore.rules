@@ -10,9 +10,12 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      // Admins are identified by role field in their user doc
-      return isSignedIn() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      // Admins are identified by a custom auth token claim set server-side
+      // or by a whitelisted email (fallback when claims aren't set yet)
+      return isSignedIn() && (
+        request.auth.token.role == 'admin' ||
+        request.auth.token.email in ['admin@ugsdesk.com']
+      );
     }
 
     // Default deny
@@ -20,11 +23,11 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Users collection: users can read their own doc when verified.
+    // Users collection: users can read their own doc when signed in (even if not yet verified) and admins can read any.
     match /users/{uid} {
-      allow read: if isVerified() && request.auth.uid == uid || isAdmin();
+      allow read: if (isSignedIn() && request.auth.uid == uid) || isAdmin();
       // Creation allowed for signed-in user to create their own doc without role changes
-      allow create: if isSignedIn() && request.auth.uid == uid;
+      allow create: if (isSignedIn() && request.auth.uid == uid) || isAdmin();
       // Updates: user can update their own non-privileged fields when signed in; prevent role escalation
       allow update: if (
         (
@@ -40,7 +43,7 @@ service cloud.firestore {
     // Visa applications: owner CRUD when verified; admin full access
     match /visaApplications/{appId} {
       allow read: if isVerified() && resource.data.uid == request.auth.uid || isAdmin();
-      allow create: if isVerified() && request.resource.data.uid == request.auth.uid;
+      allow create: if (isVerified() && request.resource.data.uid == request.auth.uid) || isAdmin();
       allow update, delete: if (
         isVerified() && request.resource.data.uid == request.auth.uid
       ) || isAdmin();
@@ -49,10 +52,23 @@ service cloud.firestore {
     // Documents uploaded per user (if you use a separate collection)
     match /documents/{docId} {
       allow read: if isVerified() && resource.data.uid == request.auth.uid || isAdmin();
-      allow create: if isVerified() && request.resource.data.uid == request.auth.uid;
+      allow create: if (isVerified() && request.resource.data.uid == request.auth.uid) || isAdmin();
       allow update, delete: if (
         isVerified() && request.resource.data.uid == request.auth.uid
       ) || isAdmin();
+    }
+
+    // Admin-managed system collections used during seeding
+    match /payments/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /messages/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /audits/{docId} {
+      allow read, write: if isAdmin();
     }
 
     // Settings: read-only to verified users; write admin only

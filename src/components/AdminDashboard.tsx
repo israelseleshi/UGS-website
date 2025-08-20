@@ -6,7 +6,7 @@ import { Button } from './button';
 import { Badge } from './badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs';
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
-import { ensureBaseCollections } from '../lib/db';
+import { ensureBaseCollections, listAllApplications, type VisaApplication } from '../lib/db';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from './avatar';
 import { Progress } from './progress';
@@ -59,6 +59,8 @@ interface AdminDashboardProps {
 export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) {
   const [selectedTab, setSelectedTab] = useState('overview');
   const [theme, setTheme] = useState<AppTheme>(readTheme());
+  const [applications, setApplications] = useState<(VisaApplication & { id: string })[]>([]);
+  const [loading, setLoading] = useState(true);
 
   React.useEffect(() => {
     const onChange = (e: Event) => {
@@ -69,19 +71,79 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
     return () => window.removeEventListener('themechange', onChange as EventListener);
   }, []);
 
-  // Mock data for the dashboard
+  // Load applications from Firebase
+  React.useEffect(() => {
+    let ignore = false;
+    async function loadApplications() {
+      try {
+        setLoading(true);
+        const { items } = await listAllApplications(50);
+        if (!ignore) {
+          setApplications(items);
+        }
+      } catch (error) {
+        console.error('Error loading applications:', error);
+        if (!ignore) {
+          toast.error('Failed to load applications');
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+    loadApplications();
+    return () => { ignore = true; };
+  }, []);
+
+  // Calculate real stats from applications data
+  const totalApplications = applications.length;
+  const approvedApplications = applications.filter(app => app.status === 'approved').length;
+  const totalRevenue = applications.reduce((sum, app) => sum + (app.estimatedCost || 0), 0);
+  const successRate = totalApplications > 0 ? ((approvedApplications / totalApplications) * 100).toFixed(1) : '0';
+  const uniqueUsers = new Set(applications.map(app => app.uid)).size;
+
   const overviewStats = [
-    { title: 'Total Applications', value: '12,847', change: '+12%', icon: FileText, color: 'text-blue-600' },
-    { title: 'Active Users', value: '8,392', change: '+8%', icon: Users, color: 'text-green-600' },
-    { title: 'Revenue (MTD)', value: '$247,890', change: '+23%', icon: DollarSign, color: 'text-purple-600' },
-    { title: 'Success Rate', value: '98.2%', change: '+2.1%', icon: CheckCircle, color: 'text-emerald-600' }
+    { title: 'Total Applications', value: totalApplications.toString(), change: '+12%', icon: FileText, color: 'text-blue-600' },
+    { title: 'Active Users', value: uniqueUsers.toString(), change: '+8%', icon: Users, color: 'text-green-600' },
+    { title: 'Revenue (Est.)', value: `$${totalRevenue.toLocaleString()}`, change: '+23%', icon: DollarSign, color: 'text-purple-600' },
+    { title: 'Success Rate', value: `${successRate}%`, change: '+2.1%', icon: CheckCircle, color: 'text-emerald-600' }
   ];
 
+  // Calculate service stats from real data
   const serviceStats = [
-    { name: 'Tourism & Leisure', applications: 4580, revenue: 98420, success: 97.8, icon: Plane, color: '#3b82f6' },
-    { name: 'Immigration', applications: 3240, revenue: 142380, success: 98.9, icon: Home, color: '#10b981' },
-    { name: 'Trade License', applications: 1890, revenue: 89450, success: 99.1, icon: Building, color: '#f59e0b' },
-    { name: 'Education', applications: 3137, revenue: 76340, success: 97.2, icon: GraduationCap, color: '#8b5cf6' }
+    {
+      name: 'Tourism & Leisure',
+      applications: applications.filter(app => app.travel?.serviceType === 'tourist').length,
+      revenue: applications.filter(app => app.travel?.serviceType === 'tourist').reduce((sum, app) => sum + (app.estimatedCost || 0), 0),
+      success: 97.8,
+      icon: Plane,
+      color: '#3b82f6'
+    },
+    {
+      name: 'Immigration',
+      applications: applications.filter(app => app.travel?.serviceType === 'immigration').length,
+      revenue: applications.filter(app => app.travel?.serviceType === 'immigration').reduce((sum, app) => sum + (app.estimatedCost || 0), 0),
+      success: 98.9,
+      icon: Home,
+      color: '#10b981'
+    },
+    {
+      name: 'Business',
+      applications: applications.filter(app => app.travel?.serviceType === 'business').length,
+      revenue: applications.filter(app => app.travel?.serviceType === 'business').reduce((sum, app) => sum + (app.estimatedCost || 0), 0),
+      success: 99.1,
+      icon: Building,
+      color: '#f59e0b'
+    },
+    {
+      name: 'Education',
+      applications: applications.filter(app => app.travel?.serviceType === 'student').length,
+      revenue: applications.filter(app => app.travel?.serviceType === 'student').reduce((sum, app) => sum + (app.estimatedCost || 0), 0),
+      success: 97.2,
+      icon: GraduationCap,
+      color: '#8b5cf6'
+    }
   ];
 
   const monthlyData = [
@@ -93,13 +155,39 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
     { month: 'Jun', applications: 1920, revenue: 52100 }
   ];
 
-  const recentApplications = [
-    { id: 'APP-001', client: 'John Doe', service: 'Tourist Visa', country: 'USA', status: 'Approved', date: '2024-01-15', amount: '$299' },
-    { id: 'APP-002', client: 'Sarah Smith', service: 'Work Visa', country: 'Canada', status: 'Processing', date: '2024-01-14', amount: '$899' },
-    { id: 'APP-003', client: 'Mike Johnson', service: 'Student Visa', country: 'UK', status: 'Pending', date: '2024-01-14', amount: '$599' },
-    { id: 'APP-004', client: 'Emily Chen', service: 'Business Visa', country: 'Australia', status: 'Approved', date: '2024-01-13', amount: '$399' },
-    { id: 'APP-005', client: 'David Wilson', service: 'Immigration', country: 'Germany', status: 'Processing', date: '2024-01-13', amount: '$1299' }
-  ];
+  // Transform Firebase applications to display format
+  const recentApplications = applications.slice(0, 10).map(app => ({
+    id: app.id,
+    client: `${app.personalInfo?.firstName || ''} ${app.personalInfo?.lastName || ''}`.trim() || 'Unknown',
+    service: getServiceDisplayName(app.travel?.serviceType),
+    country: app.travel?.destination || 'Not specified',
+    status: getStatusDisplayName(app.status),
+    date: app.createdAt?.toDate?.()?.toISOString()?.slice(0, 10) || 'Unknown',
+    amount: app.estimatedCost ? `$${app.estimatedCost}` : 'TBD',
+    email: app.userEmail || app.personalInfo?.email || 'No email',
+    priority: app.priority || 'normal'
+  }));
+
+  function getServiceDisplayName(serviceType?: string): string {
+    switch (serviceType) {
+      case 'tourist': return 'Tourist Visa';
+      case 'business': return 'Business Visa';
+      case 'student': return 'Student Visa';
+      case 'work': return 'Work Visa';
+      case 'immigration': return 'Immigration Services';
+      default: return 'Other Services';
+    }
+  }
+
+  function getStatusDisplayName(status: string): string {
+    switch (status) {
+      case 'submitted': return 'Processing';
+      case 'in_review': return 'Under Review';
+      case 'approved': return 'Approved';
+      case 'rejected': return 'Rejected';
+      default: return 'Pending';
+    }
+  }
 
   const visaEdStats = [
     { course: 'Tourist Visa Fundamentals', enrolled: 1240, completed: 980, rating: 4.8 },
@@ -132,7 +220,7 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b border-border bg-card">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-6 sm:px-8 lg:px-12">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-3">
@@ -151,6 +239,25 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                 <Sun className={`w-4 h-4 transition-opacity ${theme === 'dark' ? 'opacity-100' : 'opacity-0'}`} />
                 <Moon className={`w-4 h-4 transition-opacity absolute ${theme === 'dark' ? 'opacity-0' : 'opacity-100'}`} />
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onPageChange('home')}
+                className="hidden sm:flex"
+              >
+                <Home className="w-4 h-4 mr-2" />
+                Back to Website
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onPageChange('home')}
+                className="sm:hidden w-9 h-9 p-0"
+                aria-label="Back to website"
+                title="Back to website"
+              >
+                <Home className="w-4 h-4" />
+              </Button>
               <Button variant="outline" size="sm">
                 <Download className="w-4 h-4 mr-2" />
                 Export
@@ -167,7 +274,7 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
       </div>
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-6 sm:px-8 lg:px-12 pt-8 pb-12">
         {/* Admin quick actions */}
         <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
           <div className="text-sm text-muted-foreground">Admin Tools</div>
@@ -381,29 +488,57 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                 <CardDescription>Latest visa applications and their status</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {recentApplications.map((app, index) => (
-                    <div key={index} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border rounded-lg">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
-                          <FileText className="w-5 h-5" />
+                {loading ? (
+                  <div className="space-y-4">
+                    {[...Array(5)].map((_, index) => (
+                      <div key={index} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border rounded-lg animate-pulse">
+                        <div className="flex items-center space-x-4">
+                          <div className="w-10 h-10 bg-muted rounded-full"></div>
+                          <div className="space-y-2">
+                            <div className="h-4 bg-muted rounded w-32"></div>
+                            <div className="h-3 bg-muted rounded w-48"></div>
+                            <div className="h-3 bg-muted rounded w-24"></div>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="font-semibold">{app.client}</h4>
-                          <p className="text-sm text-muted-foreground">{app.service} - {app.country}</p>
-                          <p className="text-xs text-muted-foreground">{app.id} • {app.date}</p>
+                        <div className="flex items-center space-x-4">
+                          <div className="h-6 bg-muted rounded w-20"></div>
+                          <div className="h-4 bg-muted rounded w-16"></div>
+                          <div className="w-8 h-8 bg-muted rounded"></div>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-4">
-                        <Badge className={getStatusColor(app.status)}>{app.status}</Badge>
-                        <span className="font-semibold">{app.amount}</span>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="w-4 h-4" />
-                        </Button>
+                    ))}
+                  </div>
+                ) : recentApplications.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>No applications found</p>
+                    <p className="text-sm">Applications will appear here when users submit visa requests</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {recentApplications.map((app, index) => (
+                      <div key={index} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border rounded-lg">
+                        <div className="flex items-center space-x-4">
+                          <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
+                            <FileText className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h4 className="font-semibold">{app.client}</h4>
+                            <p className="text-sm text-muted-foreground">{app.service} - {app.country}</p>
+                            <p className="text-xs text-muted-foreground">{app.id} • {app.date}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-4">
+                          <Badge className={getStatusColor(app.status)}>{app.status}</Badge>
+                          <span className="font-semibold">{app.amount}</span>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

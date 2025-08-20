@@ -69,6 +69,15 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
         // App.tsx will auto-route based on verification and role claims
       } else {
         if (!formData.agreeToTerms) throw new Error('Please agree to the terms and conditions');
+        // Basic email validation (and hint for Gmail-only if desired)
+        const email = (formData.email || '').trim();
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+          throw new Error('Please enter a valid email address.');
+        }
+        // Ensure passwords match
+        if ((formData.password || '').trim() !== (formData.confirmPassword || '').trim()) {
+          throw new Error('Passwords do not match.');
+        }
         await signUpWithEmail(formData.email, formData.password);
         // Save profile fields to Firestore (users/{uid})
         try {
@@ -77,12 +86,15 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
             await upsertUser({
               uid: u.uid,
               email: u.email ?? formData.email,
+              firstName: formData.firstName?.trim() || undefined,
+              lastName: formData.lastName?.trim() || undefined,
               // store concatenated name and phone if provided
               // These are optional in rules and safe for signed-in users
               // Avoid writing role from client
               // Additional custom fields are allowed
               fullName: `${formData.firstName} ${formData.lastName}`.trim(),
               phone: formData.phone || undefined,
+              photoURL: u.photoURL ?? null,
             } as any);
           }
         } catch {}
@@ -142,7 +154,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
       </div>
 
       {/* Left side - Form */}
-      <div className="flex-1 flex items-center justify-center p-8 relative z-10">
+      <div className="flex-1 flex items-center justify-center px-6 sm:px-8 lg:px-12 py-8 relative z-10">
         <motion.div
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
@@ -359,7 +371,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                       transition={{ delay: 0.9 }}
                       className="space-y-4"
                     >
-                      <div className="flex items-start space-x-3">
+                      <div className="container mx-auto px-6 sm:px-8 lg:px-12">
                         <Checkbox 
                           id="terms" 
                           checked={formData.agreeToTerms}
