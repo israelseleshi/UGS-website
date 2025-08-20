@@ -24,6 +24,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { useAuth } from './lib/auth';
+import { Toaster } from 'sonner';
 import { ensureBaseCollections } from './lib/db';
 
 export default function App() {
@@ -45,20 +46,21 @@ export default function App() {
     return () => window.removeEventListener('themechange', onChange as EventListener);
   }, []);
 
-  // Auto-route on auth state
+  // Auto-route on auth state (only when landing from auth pages)
   useEffect(() => {
     if (user) {
       const email = user.email?.toLowerCase();
+      const isAuthPage = ['signin', 'signup', 'home'].includes(currentPage);
       if (email === 'admin@ugsdesk.com') {
         setIsAdmin(true);
         setIsClient(false);
-        setCurrentPage('admin-dashboard');
+        if (isAuthPage) setCurrentPage('admin-dashboard');
         // Seed base collections on first admin login
         ensureBaseCollections().catch(console.warn);
       } else {
         setIsClient(true);
         setIsAdmin(false);
-        setCurrentPage('client-dashboard');
+        if (isAuthPage) setCurrentPage('client-dashboard');
       }
     } else {
       setIsAdmin(false);
@@ -71,6 +73,15 @@ export default function App() {
   }, [theme]);
 
   const toggleTheme = () => setTheme(flipTheme());
+
+  // Always scroll to top on page change
+  useEffect(() => {
+    try {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch {
+      window.scrollTo(0, 0);
+    }
+  }, [currentPage]);
 
   // Authentication handlers
   const handleAdminLogin = () => {
@@ -484,6 +495,7 @@ export default function App() {
         {renderPage()}
         </div>
       </main>
+      <Toaster richColors position="top-center" />
       
       {/* Footer - only show for non-dashboard pages */}
       {shouldShowHeader && (

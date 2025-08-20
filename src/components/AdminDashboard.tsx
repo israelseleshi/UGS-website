@@ -6,6 +6,8 @@ import { Button } from './button';
 import { Badge } from './badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs';
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
+import { ensureBaseCollections } from '../lib/db';
+import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from './avatar';
 import { Progress } from './progress';
 import { 
@@ -166,6 +168,34 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
+        {/* Admin quick actions */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-sm text-muted-foreground">Admin Tools</div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                const id = toast.loading('Creating base collections...');
+                try {
+                  await ensureBaseCollections();
+                  toast.success('Collections ensured in Firestore', { id });
+                } catch (e:any) {
+                  toast.error(e?.message || 'Failed to create collections', { id });
+                }
+              }}
+            >
+              Create Collections
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => onPageChange?.('home')}
+            >
+              Go to Website
+            </Button>
+          </div>
+        </div>
         <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-6 bg-transparent p-0 gap-2">
             <TabsTrigger value="overview" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-500 data-[state=active]:to-pink-500 data-[state=active]:text-white shadow-sm hover:shadow transition-all">Overview</TabsTrigger>
