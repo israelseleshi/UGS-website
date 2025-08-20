@@ -250,14 +250,15 @@ html {
 /* Allow containers within main to span full width */
 .app-shell main .container {
   max-width: 100% !important;
-  margin-left: 0 !important;
-  margin-right: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
 }
 
 /* Any centered block with a Tailwind max-w-* class inside main should stretch */
 .app-shell main .mx-auto[class*="max-w-"] {
   max-width: 100% !important;
-  margin-left: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
   margin-right: 0 !important;
 }
 

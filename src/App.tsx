@@ -479,6 +479,7 @@ export default function App() {
 
   // Don't show header for dashboards
   const shouldShowHeader = !['admin-dashboard', 'client-dashboard'].includes(currentPage);
+  const isDashboardPage = !shouldShowHeader;
 
   return (
   <div className="min-h-screen bg-background text-foreground app-shell">
@@ -491,7 +492,7 @@ export default function App() {
         />
       )}
       <main className="relative">
-        <div className="px-6 sm:px-8 lg:px-12 xl:px-16 2xl:px-24">
+        <div className={isDashboardPage ? "px-6 sm:px-8 lg:px-12 xl:px-16 2xl:px-24" : "px-0"}>
         {renderPage()}
         </div>
       </main>

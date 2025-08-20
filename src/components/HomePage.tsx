@@ -73,18 +73,18 @@ export function HomePage({ onPageChange }: HomePageProps) {
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="space-y-8">
               <div className="space-y-6">
-                <div className="inline-flex items-center px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-medium">
+                <div className="inline-flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-full text-sm font-medium shadow-sm">
                   <Globe className="w-4 h-4 mr-2" />
                   Your Gateway to Global Opportunities
                 </div>
-                <h1 className="text-4xl md:text-6xl font-bold text-foreground leading-tight min-h-[200px] md:min-h-[240px] animate-fade-in tracking-tight">
+                <h1 className="text-5xl md:text-7xl font-extrabold text-foreground leading-tight min-h-[200px] md:min-h-[240px] animate-fade-in tracking-tight">
                   <Typewriter
                     text="Inspiring Borderless Thinking"
                     speed={120}
                     className="block"
                   />
                 </h1>
-                <p className="text-xl text-muted-foreground leading-relaxed animate-slide-up-fade [animation-delay:.15s] max-w-xl">
+                <p className="text-lg md:text-xl text-muted-foreground leading-relaxed animate-slide-up-fade [animation-delay:.15s] max-w-xl">
                   United Global Services simplifies visa processes, immigration, and international services with expert guidance and seamless solutions.
                 </p>
               </div>
@@ -151,14 +151,13 @@ export function HomePage({ onPageChange }: HomePageProps) {
       </section>
 
       {/* Stats Section */}
-      <section className="relative py-20">
-        <div className="absolute inset-0 bg-gradient-to-b from-background via-muted/40 to-background pointer-events-none" />
+      <section className="relative py-16 md:py-20 border-y border-border/60 bg-background/60">
         <div className="relative mx-auto max-w-7xl px-4 md:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-12 lg:gap-16">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-10 lg:gap-16">
             {stats.map((stat, index) => (
               <div key={index} className="text-center space-y-3">
-                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-primary/10 flex items-center justify-center">
-                  <stat.icon className="w-5 h-5 text-primary" />
+                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-red-500/10 flex items-center justify-center">
+                  <stat.icon className="w-5 h-5 text-red-500" />
                 </div>
                 <div className="text-3xl md:text-4xl font-bold text-foreground tracking-tight">{stat.number}</div>
                 <div className="text-sm md:text-base text-muted-foreground">{stat.label}</div>
@@ -180,7 +179,7 @@ export function HomePage({ onPageChange }: HomePageProps) {
 
           <div className="grid md:grid-cols-2 gap-8">
             {services.map((service, index) => (
-              <Card key={index} className="group hover:shadow-lg transition-shadow cursor-pointer" onClick={() => onPageChange('services')}>
+              <Card key={index} className="group hover:shadow-xl transition-shadow cursor-pointer overflow-hidden rounded-2xl border border-border/50 bg-card/80" onClick={() => onPageChange('services')}>
                 <CardContent className="p-0">
                   <div className="relative h-60 overflow-hidden">
                     <ImageWithFallback
@@ -190,12 +189,12 @@ export function HomePage({ onPageChange }: HomePageProps) {
                     />
                     <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
                     <div className="absolute top-4 left-4">
-                      <div className="w-12 h-12 bg-white/90 rounded-xl flex items-center justify-center shadow-md">
-                        <service.icon className="w-6 h-6 text-primary" />
+                      <div className="w-12 h-12 bg-white/95 dark:bg-white/90 rounded-xl flex items-center justify-center shadow-md ring-1 ring-black/10">
+                        <service.icon className="w-6 h-6 text-red-500" />
                       </div>
                     </div>
                   </div>
-                  <div className="p-6">
+                  <div className="p-6 bg-card">
                     <CardHeader className="p-0">
                       <CardTitle className="text-xl mb-2">{service.title}</CardTitle>
                       <CardDescription className="text-base">{service.description}</CardDescription>
@@ -229,7 +228,7 @@ export function HomePage({ onPageChange }: HomePageProps) {
 
       {/* CTA Section */}
       <section className="relative py-28 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/90 to-red-600" />
+        <div className="absolute inset-0 bg-gradient-to-br from-red-500 via-red-600 to-red-700" />
         <div className="absolute inset-0 opacity-40 mix-blend-overlay bg-[radial-gradient(circle_at_20%_20%,white_.5%,transparent_60%)]" />
         <div className="relative mx-auto max-w-5xl px-6 md:px-10 text-center">
           <div className="space-y-10 text-white">
@@ -238,18 +237,12 @@ export function HomePage({ onPageChange }: HomePageProps) {
               Get personalized guidance from our expert team. Start your visa application process today.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                size="lg" 
-                variant="secondary"
-                className="px-8"
-                onClick={() => onPageChange('request')}
-              >
+              <Button size="lg" variant="secondary" className="px-8 bg-gray-900 hover:bg-gray-800 text-white" onClick={() => onPageChange('request')}>
                 Request Visa Service
               </Button>
-              {/* empty pill input to mirror design */}
-              <div className="h-[44px] rounded-full bg-white/90 text-foreground px-5 flex items-center w-[260px] mx-auto sm:mx-0">
-                <span className="text-sm text-muted-foreground">&nbsp;</span>
-              </div>
+              <Button size="lg" variant="outline" className="px-8 bg-white/10 hover:bg-white/20 border-white/20 text-white" onClick={() => onPageChange('visaed')}>
+                Learn More at VisaEd
+              </Button>
             </div>
           </div>
         </div>
