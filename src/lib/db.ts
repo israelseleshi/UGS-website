@@ -16,6 +16,7 @@ import {
   where,
   DocumentSnapshot,
   QueryDocumentSnapshot,
+  onSnapshot,
 } from "firebase/firestore";
 
 // Types
@@ -33,6 +34,50 @@ export type UserDoc = {
   createdAt?: any;
   lastLoginAt?: any;
 };
+
+// Messaging
+export type AppMessage = {
+  text: string;
+  byUid: string;
+  byRole?: 'admin' | 'user';
+  createdAt?: any;
+};
+
+export async function listApplicationMessages(appId: string, pageSize = 50, cursor?: QueryDocumentSnapshot) {
+  const base = query(
+    collection(getDb(), 'visaApplications', appId, 'messages'),
+    orderBy('createdAt', 'asc'),
+    limit(pageSize),
+  );
+  const q = cursor ? query(base, startAfter(cursor)) : base;
+  const snap = await getDocs(q);
+  const items = snap.docs.map(d => ({ id: d.id, ...(d.data() as AppMessage) }));
+  const nextCursor = snap.docs[snap.docs.length - 1];
+  return { items, nextCursor };
+}
+
+export async function sendApplicationMessage(appId: string, msg: { text: string; byUid: string; byRole?: 'admin' | 'user' }) {
+  const ref = collection(getDb(), 'visaApplications', appId, 'messages');
+  const docRef = await addDoc(ref, { ...msg, createdAt: serverTimestamp() });
+  const snap = await getDoc(docRef);
+  return { id: docRef.id, ...(snap.data() as AppMessage) };
+}
+
+// Real-time subscribe to application messages
+export function subscribeApplicationMessages(
+  appId: string,
+  cb: (items: (AppMessage & { id: string })[]) => void,
+) {
+  const q = query(
+    collection(getDb(), 'visaApplications', appId, 'messages'),
+    orderBy('createdAt', 'asc')
+  );
+  const unsub = onSnapshot(q, (snap) => {
+    const items = snap.docs.map(d => ({ id: d.id, ...(d.data() as AppMessage) }));
+    cb(items);
+  });
+  return unsub;
+}
 
 function getDb() {
   if (!db) throw new Error("Firestore not configured");

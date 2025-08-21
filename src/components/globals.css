@@ -274,3 +274,115 @@ html {
   padding-left: 1rem !important;
   padding-right: 1rem !important;
 }
+
+/* Mobile Sidebar Enhancements */
+@media (max-width: 1023px) {
+  /* Prevent body scroll when sidebar is open */
+  body.sidebar-open {
+    overflow: hidden;
+  }
+  
+  /* Smooth transitions for mobile navigation */
+  .mobile-sidebar-transition {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  /* Enhanced touch targets for mobile */
+  .mobile-touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Mobile-optimized card spacing */
+  .mobile-card-spacing {
+    margin-bottom: 1rem;
+  }
+  
+  /* Mobile tab indicators */
+  .mobile-tab-indicator {
+    position: relative;
+  }
+  
+  .mobile-tab-indicator::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(to right, #ef4444, #ec4899);
+    border-radius: 1px;
+  }
+}
+
+/* Premium mobile animations */
+@keyframes slideInFromLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutToLeft {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
+
+.mobile-sidebar-enter {
+  animation: slideInFromLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mobile-sidebar-exit {
+  animation: slideOutToLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Mobile backdrop blur enhancement */
+.mobile-backdrop-blur {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Mobile gradient overlays */
+.mobile-gradient-overlay {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Shared layout utilities to match Figma horizontal spacing */
+@layer utilities {
+  .site-container {
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding-left: 1rem !important; /* tighter on small screens */
+    padding-right: 1rem !important;
+  }
+
+  @media (min-width: 640px) { /* sm */
+    .site-container { padding-left: 1.5rem !important; padding-right: 1.5rem !important; }
+  }
+  @media (min-width: 1024px) { /* lg */
+    .site-container { padding-left: 3rem !important; padding-right: 3rem !important; }
+  }
+
+  /* Wide content cap used by dashboards */
+  .site-max {
+    max-width: 80rem; /* ~1280px */
+  }
+
+  /* Prevent accidental horizontal scroll on mobile */
+  .no-hscroll {
+    overflow-x: hidden !important;
+    width: 100%;
+  }
+}

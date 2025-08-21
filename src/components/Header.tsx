@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from './button';
 import { Moon, Sun, Globe, Menu, X, User, LogOut } from 'lucide-react';
+import { Avatar } from './avatar';
 import { useAuth } from '../lib/auth';
 
 interface HeaderProps {
@@ -24,7 +25,7 @@ export function Header({ currentPage, onPageChange, theme, onThemeChange }: Head
 
   return (
     <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border">
-      <div className="container mx-auto px-6 sm:px-8 lg:px-12">
+      <div className="site-container">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex items-center space-x-3">
@@ -69,9 +70,12 @@ export function Header({ currentPage, onPageChange, theme, onThemeChange }: Head
             
             {user ? (
               <div className="hidden sm:flex items-center space-x-3">
-                <div className="flex items-center space-x-2 px-3 py-1.5 bg-green-50 dark:bg-green-950/20 rounded-full border border-green-200 dark:border-green-800">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-sm text-green-700 dark:text-green-300 font-medium">
+                <div className="flex items-center space-x-2 px-2 py-1.5 bg-green-50 dark:bg-green-950/20 rounded-full border border-green-200 dark:border-green-800">
+                  <Avatar className="w-6 h-6 overflow-hidden rounded-full">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    {user.photoURL ? <img src={user.photoURL} alt="me" className="w-full h-full object-cover" /> : <div className="w-full h-full bg-primary/20" />}
+                  </Avatar>
+                  <span className="text-sm text-green-700 dark:text-green-300 font-medium truncate max-w-[140px]">
                     {user.displayName || user.email?.split('@')[0] || 'User'}
                   </span>
                 </div>

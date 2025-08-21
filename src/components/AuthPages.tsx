@@ -371,7 +371,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                       transition={{ delay: 0.9 }}
                       className="space-y-4"
                     >
-                      <div className="container mx-auto px-6 sm:px-8 lg:px-12">
+                      <div className="site-container">
                         <Checkbox 
                           id="terms" 
                           checked={formData.agreeToTerms}

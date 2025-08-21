@@ -1,6 +1,6 @@
 const functionsRegion = (import.meta.env.VITE_FIREBASE_FUNCTIONS_REGION as string | undefined) || "us-central1";
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, setPersistence, browserSessionPersistence } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getFunctions } from "firebase/functions";
 
@@ -46,6 +46,14 @@ export const auth = app ? getAuth(app) : undefined;
 export const googleProvider = app ? new GoogleAuthProvider() : undefined;
 export const db = app ? getFirestore(app) : undefined;
 export const functions = app ? getFunctions(app, functionsRegion) : undefined;
+
+// Ensure auth only persists for the current browser session (not across restarts)
+try {
+  if (auth) {
+    // This prevents unexpected auto-login on fresh loads unless a session is already open
+    setPersistence(auth, browserSessionPersistence).catch(() => {});
+  }
+} catch {}
 
 // Optional: connect to emulators in dev (uncomment if you enable emulators)
 // import { connectAuthEmulator } from "firebase/auth";

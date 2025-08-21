@@ -1,28 +1,31 @@
 import React, { useState } from 'react';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, Menu, X } from 'lucide-react'; // Added Menu and X icons
 import { getTheme as readTheme, toggleTheme as flipTheme, type AppTheme } from './theme';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card';
 import { Button } from './button';
 import { Badge } from './badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs';
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
-import { ensureBaseCollections, listAllApplications, type VisaApplication } from '../lib/db';
+import { listAllApplications, getVisaApplication, updateVisaApplication, sendApplicationMessage, subscribeApplicationMessages, type VisaApplication, type AppMessage } from '../lib/db';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from './avatar';
 import { Progress } from './progress';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import { MobileSidebar, MobileMenuButton } from './MobileSidebar';
+import { useIsMobile } from './use-mobile';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   LineChart,
   Line,
   PieChart,
   Pie,
-  Cell
+  Cell,
+  Legend
 } from 'recharts';
 import {
   Users,
@@ -48,8 +51,18 @@ import {
   Eye,
   Edit,
   Trash2,
-  Star
+  Star,
+  BarChart3,
+  Mail,
+  Clipboard,
+  Check,
+  XCircle,
+  LogOut,
+  Send
 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './dialog';
+import { DesktopSidebar } from './DesktopSidebar';
+import { useAuth } from '../lib/auth';
 
 interface AdminDashboardProps {
   onPageChange: (page: string) => void;
@@ -61,6 +74,19 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
   const [theme, setTheme] = useState<AppTheme>(readTheme());
   const [applications, setApplications] = useState<(VisaApplication & { id: string })[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const isMobile = useIsMobile();
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false); // State for sidebar collapse
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  // Keep unsubscribe handle for messages
+  const messagesUnsub = React.useRef<undefined | (() => void)>(undefined);
+  const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
+  const [selectedApp, setSelectedApp] = useState<(VisaApplication & { id: string }) | null>(null);
+  const { user } = useAuth();
+  const [messages, setMessages] = useState<(AppMessage & { id: string })[]>([]);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [newMessage, setNewMessage] = useState('');
 
   React.useEffect(() => {
     const onChange = (e: Event) => {
@@ -70,6 +96,67 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
     window.addEventListener('themechange', onChange as EventListener);
     return () => window.removeEventListener('themechange', onChange as EventListener);
   }, []);
+
+  React.useEffect(() => {
+    if (!detailsOpen) {
+      // Cleanup when dialog closes
+      messagesUnsub.current?.();
+      messagesUnsub.current = undefined;
+    }
+    return () => {
+      messagesUnsub.current?.();
+      messagesUnsub.current = undefined;
+    };
+  }, [detailsOpen]);
+
+  async function openDetails(id: string) {
+    try {
+      setSelectedAppId(id);
+      setDetailsOpen(true);
+      setDetailsLoading(true);
+      const app = await getVisaApplication(id);
+      setSelectedApp((app as any) || null);
+      // Subscribe to messages in real-time
+      try {
+        setMessagesLoading(true);
+        messagesUnsub.current?.();
+        messagesUnsub.current = subscribeApplicationMessages(id, (items) => {
+          setMessages(items as any);
+        });
+      } catch (e) {
+        setMessages([]);
+      } finally {
+        setMessagesLoading(false);
+      }
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to fetch application details');
+    } finally {
+      setDetailsLoading(false);
+    }
+  }
+
+  async function sendMsg() {
+    if (!selectedAppId || !user || !newMessage.trim()) return;
+    try {
+      const sent = await sendApplicationMessage(selectedAppId, { text: newMessage.trim(), byUid: user.uid, byRole: 'admin' });
+      setMessages(prev => [...prev, { id: (sent as any).id, ...(sent as any) }]);
+      setNewMessage('');
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to send message');
+    }
+  }
+
+  async function updateSelectedStatus(newStatus: 'submitted' | 'in_review' | 'approved' | 'rejected') {
+    if (!selectedAppId) return;
+    try {
+      await updateVisaApplication(selectedAppId, { status: newStatus });
+      setApplications(prev => prev.map(a => a.id === selectedAppId ? { ...a, status: newStatus } as any : a));
+      setSelectedApp(prev => prev ? ({ ...prev, status: newStatus }) as any : prev);
+      toast.success('Status updated');
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to update status');
+    }
+  }
 
   // Load applications from Firebase
   React.useEffect(() => {
@@ -216,17 +303,43 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
 
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
 
+  // Admin tabs configuration
+  const adminTabs = [
+    { value: 'overview', label: 'Overview', icon: BarChart3, description: 'Dashboard overview and analytics' },
+    { value: 'applications', label: 'Applications', icon: FileText, badge: applications.length.toString(), description: 'Manage visa applications' },
+    { value: 'users', label: 'Users', icon: Users, description: 'User management and profiles' },
+    { value: 'visaed', label: 'VisaEd', icon: GraduationCap, description: 'Educational content management' },
+    { value: 'allen', label: 'Allen AI', icon: Bot, description: 'AI assistant analytics' },
+    { value: 'analytics', label: 'Analytics', icon: BarChart3, description: 'Advanced analytics and reports' }
+  ];
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background no-hscroll">
       {/* Header */}
       <div className="border-b border-border bg-card">
-        <div className="container mx-auto px-6 sm:px-8 lg:px-12">
+        <div className="site-container">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
+              <MobileMenuButton onClick={() => setMobileSidebarOpen(true)} />
+              {/* Desktop Hamburger Icon */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                className="hidden md:inline-flex" // Show only on medium screens and up
+                aria-label="Toggle sidebar"
+              >
+                {isSidebarCollapsed ? (
+                  <X className="w-5 h-5" />
+                ) : (
+                  <Menu className="w-5 h-5" />
+                )}
+              </Button>
               <div className="flex items-center space-x-3">
                 <div className="w-8 h-8 bg-gradient-to-br from-primary to-red-600 rounded-lg flex items-center justify-center">
                   <Globe className="w-5 h-5 text-white" />
                 </div>
+
                 <div>
                   <h1 className="text-lg font-bold">UGS Admin</h1>
                   <p className="text-xs text-muted-foreground">Control Center</p>
@@ -234,38 +347,30 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
               </div>
             </div>
             
-            <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="sm" onClick={() => setTheme(flipTheme())} className="relative w-9 h-9 p-0">
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <Button variant="ghost" size="sm" onClick={() => setTheme(flipTheme())} className="relative w-9 h-9 p-0" aria-label="Toggle theme">
                 <Sun className={`w-4 h-4 transition-opacity ${theme === 'dark' ? 'opacity-100' : 'opacity-0'}`} />
                 <Moon className={`w-4 h-4 transition-opacity absolute ${theme === 'dark' ? 'opacity-0' : 'opacity-100'}`} />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onPageChange('home')}
-                className="hidden sm:flex"
-              >
-                <Home className="w-4 h-4 mr-2" />
-                Back to Website
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => onPageChange('home')}
-                className="sm:hidden w-9 h-9 p-0"
+                className="w-9 h-9 p-0"
                 aria-label="Back to website"
                 title="Back to website"
               >
                 <Home className="w-4 h-4" />
               </Button>
-              <Button variant="outline" size="sm">
-                <Download className="w-4 h-4 mr-2" />
-                Export
-              </Button>
-              <Avatar className="w-8 h-8">
-                <AvatarFallback className="bg-primary text-white text-xs">AD</AvatarFallback>
-              </Avatar>
-              <Button variant="ghost" size="sm" onClick={onLogout}>
+              {/* Desktop-only Logout */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onLogout}
+                className="hidden md:inline-flex"
+                title="Log out"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
                 Logout
               </Button>
             </div>
@@ -273,48 +378,200 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="container mx-auto px-6 sm:px-8 lg:px-12 pt-8 pb-12">
-        {/* Admin quick actions */}
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-          <div className="text-sm text-muted-foreground">Admin Tools</div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={async () => {
-                const id = toast.loading('Creating base collections...');
-                try {
-                  await ensureBaseCollections();
-                  toast.success('Collections ensured in Firestore', { id });
-                } catch (e:any) {
-                  toast.error(e?.message || 'Failed to create collections', { id });
-                }
-              }}
+      {/* Details Dialog (moved outside header) */}
+      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <DialogContent className="max-w-[95vw] w-[95vw] sm:w-full sm:max-w-xl rounded-2xl p-0 overflow-hidden flex flex-col max-h-[90vh]">
+          <DialogHeader className="relative bg-gradient-to-r from-red-500 to-pink-500 text-white p-5">
+            <button
+              type="button"
+              onClick={() => setDetailsOpen(false)}
+              aria-label="Close details"
+              className="absolute left-3 top-3 p-1 rounded-md text-white/90 hover:text-white hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/30"
             >
-              Create Collections
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => onPageChange?.('home')}
-            >
-              Go to Website
-            </Button>
-          </div>
-        </div>
-        <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
-          <TabsList className="grid w-full bg-transparent p-0 gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden grid-flow-col auto-cols-max sm:grid-flow-row sm:auto-cols-auto sm:grid-cols-6">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-500 data-[state=active]:to-pink-500 data-[state=active]:text-white shadow-sm hover:shadow transition-all">Overview</TabsTrigger>
-            <TabsTrigger value="applications" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-500 data-[state=active]:to-pink-500 data-[state=active]:text-white shadow-sm hover:shadow transition-all">Applications</TabsTrigger>
-            <TabsTrigger value="users" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-500 data-[state=active]:to-pink-500 data-[state=active]:text-white shadow-sm hover:shadow transition-all">Users</TabsTrigger>
-            <TabsTrigger value="visaed" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-500 data-[state=active]:to-pink-500 data-[state=active]:text-white shadow-sm hover:shadow transition-all">VisaEd</TabsTrigger>
-            <TabsTrigger value="allen" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-500 data-[state=active]:to-pink-500 data-[state=active]:text-white shadow-sm hover:shadow transition-all">Allen AI</TabsTrigger>
-            <TabsTrigger value="analytics" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-500 data-[state=active]:to-pink-500 data-[state=active]:text-white shadow-sm hover:shadow transition-all">Analytics</TabsTrigger>
-          </TabsList>
+              <X className="w-4 h-4" />
+            </button>
+            <DialogTitle className="text-white flex items-center justify-between">
+              <span>Application Details</span>
+              {selectedAppId && (
+                <span className="text-xs opacity-90 truncate max-w-[50vw] sm:max-w-none">ID: {selectedAppId}</span>
+              )}
+            </DialogTitle>
+            <DialogDescription className="text-white/80">Full application information and quick actions</DialogDescription>
+          </DialogHeader>
 
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-6">
+          <div className="p-5 space-y-6 overflow-x-hidden overflow-y-auto flex-1">
+            {detailsLoading ? (
+              <div className="space-y-3">
+                <div className="h-4 w-40 bg-muted rounded animate-pulse" />
+                <div className="h-3 w-64 bg-muted rounded animate-pulse" />
+                <div className="h-3 w-52 bg-muted rounded animate-pulse" />
+                <div className="h-48 w-full bg-muted rounded animate-pulse" />
+              </div>
+            ) : !selectedApp ? (
+              <div className="text-sm text-muted-foreground">No data available.</div>
+            ) : (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Client</p>
+                    <p className="font-semibold">
+                      {`${selectedApp.personalInfo?.firstName ?? ''} ${selectedApp.personalInfo?.lastName ?? ''}`.trim() || 'Unknown'}
+                    </p>
+                  </div>
+                  <Badge className={getStatusColor(getStatusDisplayName(selectedApp.status as any))}>
+                    {getStatusDisplayName(selectedApp.status as any)}
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Email</p>
+                    <p className="truncate break-words">{selectedApp.userEmail || selectedApp.personalInfo?.email || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Phone</p>
+                    <p>{selectedApp.personalInfo?.phone || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Service</p>
+                    <p>{getServiceDisplayName(selectedApp.travel?.serviceType)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Country</p>
+                    <p>{selectedApp.travel?.destination || '—'}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Travel Details</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Purpose</p>
+                      <p>{selectedApp.travel?.purpose || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Dates</p>
+                      <p>{selectedApp.travel?.travelDate || '—'} → {selectedApp.travel?.returnDate || '—'}</p>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <p className="text-xs text-muted-foreground">Accommodation</p>
+                      <p className="truncate break-words">{selectedApp.travel?.accommodation || '—'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Additional</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Processing Speed</p>
+                      <p>{selectedApp.additionalInfo?.processingSpeed || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Consultation</p>
+                      <p>{selectedApp.additionalInfo?.consultationNeeded ? 'Yes' : 'No'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Document Review</p>
+                      <p>{selectedApp.additionalInfo?.documentReview ? 'Yes' : 'No'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Messages */}
+                <div className="space-y-3">
+                  <p className="text-sm font-medium flex items-center"><MessageSquare className="w-4 h-4 mr-2" /> Messages</p>
+                  <div className="border rounded-lg p-3 max-h-56 overflow-y-auto bg-muted/30">
+                    {messagesLoading ? (
+                      <div className="text-xs text-muted-foreground">Loading messages…</div>
+                    ) : messages.length === 0 ? (
+                      <div className="text-xs text-muted-foreground">No messages yet. Start the conversation.</div>
+                    ) : (
+                      <div className="space-y-2">
+                        {messages.map((m) => (
+                          <div key={m.id} className={`text-sm p-2 rounded-md ${m.byRole === 'admin' ? 'bg-blue-500/10' : 'bg-gray-500/10'}`}>
+                            <div className="text-xs text-muted-foreground mb-1">{m.byRole === 'admin' ? 'Admin' : 'Client'}</div>
+                            <div>{m.text}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      value={newMessage}
+                      onChange={e => setNewMessage(e.target.value)}
+                      placeholder="Type a message…"
+                      className="flex-1 bg-transparent border border-border rounded-md px-3 py-2 text-sm"
+                    />
+                    <Button size="sm" onClick={sendMsg} className="bg-gradient-to-r from-red-500 to-pink-500 text-white">
+                      <Send className="w-4 h-4 mr-1" /> Send
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="p-5 pt-0">
+            {/* Primary contact actions above status controls with ample spacing */}
+            <div className="grid grid-cols-2 gap-2 w-full mb-3">
+              <Button variant="secondary" onClick={() => selectedAppId && navigator.clipboard.writeText(selectedAppId)}>
+                <Clipboard className="w-4 h-4 mr-2" /> Copy ID
+              </Button>
+              <Button variant="outline" onClick={() => {
+                const email = selectedApp?.userEmail || selectedApp?.personalInfo?.email;
+                if (email) window.open(`mailto:${email}`);
+              }}>
+                <Mail className="w-4 h-4 mr-2" /> Email
+              </Button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
+              <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => updateSelectedStatus('in_review')}>
+                <Clock className="w-4 h-4 mr-2" /> In Review
+              </Button>
+              <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => updateSelectedStatus('approved')}>
+                <Check className="w-4 h-4 mr-2" /> Approve
+              </Button>
+              <Button variant="destructive" className="bg-red-600 hover:bg-red-700" onClick={() => updateSelectedStatus('rejected')}>
+                <XCircle className="w-4 h-4 mr-2" /> Reject
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Main Content */}
+      {/* Fixed left desktop sidebar to mirror mobile positioning */}
+      <div className="hidden lg:block fixed left-0 top-16 z-30 h-[calc(100vh-4rem)] py-2">
+        <div className={`${isSidebarCollapsed ? 'w-16' : 'w-64'} h-full px-2`}>
+          <DesktopSidebar
+            items={adminTabs as any}
+            selected={selectedTab}
+            onSelect={setSelectedTab}
+            collapsed={isSidebarCollapsed}
+            onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          />
+        </div>
+      </div>
+
+      <div className="site-container site-max pt-6 md:pt-8 pb-12">
+        {/* Admin quick actions removed per request */}
+        {/* Desktop: content shifts right to accommodate fixed sidebar */}
+        <div className="grid grid-cols-12 gap-4 md:gap-6">
+          {/* Hide legacy sidebar column on lg to avoid duplicate */}
+          <div className="col-span-12 lg:hidden">
+            <DesktopSidebar
+              items={adminTabs as any}
+              selected={selectedTab}
+              onSelect={setSelectedTab}
+              collapsed={isSidebarCollapsed}
+              onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            />
+          </div>
+          <div className={`col-span-12 lg:col-span-12 ${isSidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
+            <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
+              <TabsContent value="overview" className="space-y-6">
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {overviewStats.map((stat, index) => (
@@ -367,18 +624,23 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                     <PieChart>
                       <Pie
                         data={serviceStats}
-                        cx="50%"
+                        cx="45%"
                         cy="50%"
-                        outerRadius={80}
+                        innerRadius={55}
+                        outerRadius={95}
+                        paddingAngle={4}
                         fill="#8884d8"
                         dataKey="applications"
-                        label={({ name, percent = 0 }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        labelLine={false}
+                        label={false}
                       >
                         {serviceStats.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip />
+                      <Tooltip formatter={(value: number) => [value, 'Applications']} />
+                      {/* Legend on the right to avoid label overlap */}
+                      <Legend layout="vertical" align="right" verticalAlign="middle" iconType="circle" />
                     </PieChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -528,9 +790,19 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                             <p className="text-xs text-muted-foreground">{app.id} • {app.date}</p>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-4">
+                        <div className="flex items-center space-x-3 sm:space-x-4">
                           <Badge className={getStatusColor(app.status)}>{app.status}</Badge>
                           <span className="font-semibold">{app.amount}</span>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="bg-gradient-to-r from-red-500 to-pink-500 text-white hover:from-red-600 hover:to-pink-600"
+                            onClick={() => openDetails(app.id)}
+                          >
+                            <Eye className="w-4 h-4 mr-2" />
+                            <span className="hidden sm:inline">View Details</span>
+                            <span className="sm:hidden">View</span>
+                          </Button>
                           <Button variant="ghost" size="sm">
                             <MoreHorizontal className="w-4 h-4" />
                           </Button>
@@ -843,8 +1115,87 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
               </CardContent>
             </Card>
           </TabsContent>
-        </Tabs>
+
+
+              {/* Users Tab */}
+              <TabsContent value="users" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>User Management</CardTitle>
+                    <CardDescription>Manage registered users and their permissions</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground">User management features coming soon...</p>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* VisaEd Tab */}
+              <TabsContent value="visaed" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>VisaEd Analytics</CardTitle>
+                    <CardDescription>Educational content performance and engagement</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground">VisaEd analytics coming soon...</p>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Allen AI Tab */}
+              <TabsContent value="allen" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Allen AI Analytics</CardTitle>
+                    <CardDescription>AI assistant performance and user interactions</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground">Allen AI analytics coming soon...</p>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Analytics Tab */}
+              <TabsContent value="analytics" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Advanced Analytics</CardTitle>
+                    <CardDescription>Detailed reports and business intelligence</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground">Advanced analytics coming soon...</p>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </div>
+        </div>
       </div>
+
+      {/* Mobile Sidebar */}
+      <MobileSidebar
+        isOpen={mobileSidebarOpen}
+        onClose={() => setMobileSidebarOpen(false)}
+        onTabChange={setSelectedTab}
+        selectedTab={selectedTab}
+        tabs={adminTabs}
+        userData={{
+          name: "Admin User",
+          email: "admin@ugs.com",
+          status: "Administrator"
+        }}
+        isAdmin={true}
+        onLogout={onLogout}
+      />
     </div>
   );
+}
+
+export interface DesktopSidebarProps {
+  items: any[];
+  selected: string;
+  onSelect: (value: string) => void;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }

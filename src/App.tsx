@@ -206,11 +206,11 @@ export default function App() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="min-h-screen"
+        className="min-h-screen no-hscroll"
       >
         {/* Hero Section */}
-        <section className="py-20 bg-gradient-to-br from-primary/5 via-background to-red-50/30 dark:from-primary/10 dark:via-background dark:to-red-950/20">
-          <div className="container mx-auto text-center">
+        <section className="py-16 bg-gradient-to-br from-primary/5 via-background to-red-50/30 dark:from-primary/10 dark:via-background dark:to-red-950/20">
+          <div className="site-container text-center">
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -249,45 +249,45 @@ export default function App() {
         </section>
 
         {/* Services Detail */}
-        <section className="py-20">
-          <div className="container mx-auto">
-            <div className="space-y-20">
+        <section className="py-12 md:py-16">
+          <div className="site-container">
+            <div className="space-y-16">
               {services.map((service, index) => (
                 <motion.div
                   key={index}
                   initial={{ opacity: 0, y: 40 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 + index * 0.1 }}
-                  className={`grid lg:grid-cols-2 gap-12 items-center ${index % 2 === 1 ? 'lg:grid-flow-col-dense' : ''}`}
+                  className={`grid lg:grid-cols-2 gap-8 md:gap-10 lg:gap-12 items-center ${index % 2 === 1 ? 'lg:grid-flow-col-dense' : ''}`}
                 >
-                  <div className={`space-y-6 ${index % 2 === 1 ? 'lg:col-start-2' : ''}`}>
-                    <div className="flex items-center space-x-4 mb-6">
-                      <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
-                        <service.icon className="w-6 h-6 text-primary" />
+                  <div className={`space-y-5 ${index % 2 === 1 ? 'lg:col-start-2' : ''}`}>
+                    <div className="flex items-center space-x-3 mb-4">
+                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                        <service.icon className="w-5 h-5 text-primary" />
                       </div>
-                      <h2 className="text-3xl font-bold">{service.title}</h2>
+                      <h2 className="text-2xl lg:text-3xl font-bold">{service.title}</h2>
                     </div>
                     
-                    <p className="text-lg text-muted-foreground leading-relaxed">
+                    <p className="text-base lg:text-lg text-muted-foreground leading-relaxed">
                       {service.description}
                     </p>
 
-                    <div className="space-y-3">
+                    <div className="space-y-2.5">
                       {service.features.map((feature, featureIndex) => (
                         <motion.div
                           key={featureIndex}
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: 0.5 + featureIndex * 0.1 }}
-                          className="flex items-start space-x-3"
+                          className="flex items-start space-x-2.5"
                         >
-                          <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                          <span className="text-muted-foreground">{feature}</span>
+                          <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                          <span className="text-sm lg:text-base text-muted-foreground">{feature}</span>
                         </motion.div>
                       ))}
                     </div>
 
-                    <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                    <div className="flex flex-col sm:flex-row gap-3 pt-3">
                       <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                         <Button 
                           size="lg" 
@@ -314,11 +314,11 @@ export default function App() {
                     whileHover={{ scale: 1.02 }}
                     className={`relative ${index % 2 === 1 ? 'lg:col-start-1' : ''}`}
                   >
-                    <div className="relative overflow-hidden rounded-3xl shadow-2xl">
+                    <div className="relative overflow-hidden rounded-2xl shadow-xl">
                       <ImageWithFallback
                         src={service.image}
                         alt={service.title}
-                        className="w-full h-96 object-cover"
+                        className="w-full h-80 lg:h-96 object-cover"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                     </div>
@@ -330,8 +330,8 @@ export default function App() {
         </section>
 
         {/* CTA Section */}
-        <section className="py-20 bg-muted/30">
-          <div className="container mx-auto text-center">
+        <section className="py-16 bg-muted/30">
+          <div className="site-container text-center">
             <motion.h2
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}

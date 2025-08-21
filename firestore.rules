@@ -40,13 +40,32 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Visa applications: owner CRUD when verified; admin full access
+    // Visa applications: owner can create/read; updates only while draft and cannot change status; admin full access
     match /visaApplications/{appId} {
-      allow read: if isVerified() && resource.data.uid == request.auth.uid || isAdmin();
+      allow read: if (isVerified() && resource.data.uid == request.auth.uid) || isAdmin();
       allow create: if (isVerified() && request.resource.data.uid == request.auth.uid) || isAdmin();
-      allow update, delete: if (
-        isVerified() && request.resource.data.uid == request.auth.uid
-      ) || isAdmin();
+      // Owner updates allowed only while draft and status unchanged; admin can always update
+      allow update: if isAdmin() || (
+        isVerified() && request.resource.data.uid == request.auth.uid &&
+        resource.data.status == 'draft' &&
+        request.resource.data.status == resource.data.status
+      );
+      // Delete: admin always; owner only if draft
+      allow delete: if isAdmin() || (
+        isVerified() && resource.data.uid == request.auth.uid && resource.data.status == 'draft'
+      );
+
+      // Messages subcollection for admin<>client chat
+      match /messages/{messageId} {
+        function appOwner() {
+          return get(/databases/$(database)/documents/visaApplications/$(appId)).data.uid == request.auth.uid;
+        }
+        allow read: if isAdmin() || (isVerified() && appOwner());
+        allow create: if isAdmin() || (isVerified() && appOwner());
+        // No updates to messages after write to preserve audit; allow delete by admin only
+        allow update: if false;
+        allow delete: if isAdmin();
+      }
     }
 
     // Documents uploaded per user (if you use a separate collection)

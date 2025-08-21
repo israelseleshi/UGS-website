@@ -62,22 +62,22 @@ export function HomePage({ onPageChange }: HomePageProps) {
   ];
 
   return (
-  <div className="min-h-screen bg-hero-diagonal relative">
+  <div className="min-h-screen bg-hero-diagonal relative no-hscroll">
       {/* Hero Section */}
-      <section className="relative min-h-[calc(100vh-5rem)] py-16 md:py-20 flex items-center overflow-hidden">
+      <section className="relative min-h-[calc(100vh-5rem)] py-10 md:py-20 flex items-center overflow-hidden">
         {/* layered subtle gradients */}
         <div className="pointer-events-none absolute inset-0 bg-hero-radial" />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-transparent dark:from-primary/20 dark:via-background dark:to-transparent" />
         <div className="pointer-events-none absolute -right-40 top-1/3 h-[600px] w-[600px] rounded-full bg-gradient-to-tr from-primary/20 to-transparent blur-3xl opacity-50 dark:opacity-40" />
-        <div className="relative z-10 container mx-auto px-6 sm:px-8 lg:px-12">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
+        <div className="relative z-10 site-container">
+          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
             <div className="space-y-8">
               <div className="space-y-6">
                 <div className="inline-flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-full text-sm font-medium shadow-sm">
                   <Globe className="w-4 h-4 mr-2" />
                   Your Gateway to Global Opportunities
                 </div>
-                <h1 className="text-5xl md:text-7xl font-extrabold text-foreground leading-tight min-h-[200px] md:min-h-[240px] animate-fade-in tracking-tight">
+                <h1 className="text-4xl md:text-7xl font-extrabold text-foreground leading-tight min-h-[160px] md:min-h-[240px] animate-fade-in tracking-tight">
                   <Typewriter
                     text="Inspiring Borderless Thinking"
                     speed={120}
@@ -110,7 +110,7 @@ export function HomePage({ onPageChange }: HomePageProps) {
               </div>
 
               {/* Trust indicators */}
-              <div className="flex flex-wrap items-center gap-x-10 gap-y-4 pt-10 animate-slide-up-fade [animation-delay:.35s]">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-4 pt-8 md:pt-10 animate-slide-up-fade [animation-delay:.35s]">
                 <div className="flex items-center space-x-2">
                   <Shield className="w-5 h-5 text-green-500" />
                   <span className="text-sm text-muted-foreground">Secure & Confidential</span>
@@ -152,7 +152,7 @@ export function HomePage({ onPageChange }: HomePageProps) {
 
       {/* Stats Section */}
       <section className="relative py-12 md:py-16 border-y border-border/60 bg-background/60">
-        <div className="relative container mx-auto px-6 sm:px-8 lg:px-12">
+        <div className="relative site-container">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-10 lg:gap-16">
             {stats.map((stat, index) => (
               <div key={index} className="text-center space-y-3">
@@ -169,23 +169,24 @@ export function HomePage({ onPageChange }: HomePageProps) {
 
       {/* Services Section */}
       <section className="py-16 md:py-20">
-        <div className="container mx-auto px-6 sm:px-8 lg:px-12">
-          <div className="text-center mb-16">
+        <div className="site-container">
+          <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Our Services</h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Comprehensive visa and immigration solutions tailored to your unique needs
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8">
+          <div className="grid md:grid-cols-2 gap-6">
             {services.map((service, index) => (
               <Card key={index} className="group hover:shadow-xl transition-shadow cursor-pointer overflow-hidden rounded-2xl border border-border/50 bg-card/80" onClick={() => onPageChange('services')}>
                 <CardContent className="p-0">
-                  <div className="relative h-60 overflow-hidden">
+                  <div className="relative overflow-hidden rounded-t-2xl aspect-[16/9]">
                     <ImageWithFallback
                       src={service.image}
                       alt={service.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
                     />
                     <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
                     <div className="absolute top-4 left-4">
@@ -223,6 +224,7 @@ export function HomePage({ onPageChange }: HomePageProps) {
               <ArrowRight className="w-5 h-5 ml-2" />
             </Button>
           </div>
+          </div>
         </div>
       </section>
 
@@ -230,7 +232,7 @@ export function HomePage({ onPageChange }: HomePageProps) {
       <section className="relative py-20 md:py-24 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-red-500 via-red-600 to-red-700" />
         <div className="absolute inset-0 opacity-40 mix-blend-overlay bg-[radial-gradient(circle_at_20%_20%,white_.5%,transparent_60%)]" />
-        <div className="relative container mx-auto px-6 sm:px-8 lg:px-12 text-center">
+        <div className="relative site-container text-center">
           <div className="space-y-10 text-white">
             <h2 className="text-3xl md:text-4xl font-bold">Ready to Begin Your Journey?</h2>
             <p className="text-xl opacity-90 max-w-3xl mx-auto leading-relaxed">
