@@ -6,7 +6,7 @@ import { Button } from './button';
 import { Badge } from './badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs';
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
-import { listAllApplications, getVisaApplication, updateVisaApplication, sendApplicationMessage, subscribeApplicationMessages, type VisaApplication, type AppMessage } from '../lib/db';
+import { listAllApplications, getVisaApplication, updateVisaApplication, sendApplicationMessage, subscribeApplicationMessages, listVisaEdRegistrations, type VisaApplication, type AppMessage, type VisaEdRegistration } from '../lib/db';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from './avatar';
 import { Progress } from './progress';
@@ -88,6 +88,17 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
   const [messages, setMessages] = useState<(AppMessage & { id: string })[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [newMessage, setNewMessage] = useState('');
+  // VisaEd state
+  const [visaEdRegs, setVisaEdRegs] = useState<(VisaEdRegistration & { id: string })[]>([]);
+  const [visaEdLoading, setVisaEdLoading] = useState(true);
+  const [visaEdSearch, setVisaEdSearch] = useState('');
+  const [visaEdPlanFilter, setVisaEdPlanFilter] = useState<'all' | 'free' | 'premium' | 'luxury'>('all');
+  const [visaEdStatusFilter, setVisaEdStatusFilter] = useState<'all' | 'registered' | 'active' | 'completed' | 'cancelled'>('all');
+  // VisaEd dialogs and selection
+  const [selectedReg, setSelectedReg] = useState<(VisaEdRegistration & { id: string }) | null>(null);
+  const [regViewOpen, setRegViewOpen] = useState(false);
+  const [regMsgOpen, setRegMsgOpen] = useState(false);
+  const [regMsg, setRegMsg] = useState('');
 
   React.useEffect(() => {
     const onChange = (e: Event) => {
@@ -96,6 +107,24 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
     };
     window.addEventListener('themechange', onChange as EventListener);
     return () => window.removeEventListener('themechange', onChange as EventListener);
+  }, []);
+
+  // Load VisaEd registrations
+  React.useEffect(() => {
+    let ignore = false;
+    async function loadRegs() {
+      try {
+        setVisaEdLoading(true);
+        const { items } = await listVisaEdRegistrations(100);
+        if (!ignore) setVisaEdRegs(items as any);
+      } catch (e) {
+        console.error('Failed to load VisaEd registrations', e);
+      } finally {
+        if (!ignore) setVisaEdLoading(false);
+      }
+    }
+    loadRegs();
+    return () => { ignore = true; };
   }, []);
 
   React.useEffect(() => {
@@ -304,6 +333,20 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
 
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
 
+  // Derived list for VisaEd filtered regs
+  const filteredVisaEdRegs = visaEdRegs
+    .filter(r => {
+      const q = visaEdSearch.trim().toLowerCase();
+      if (!q) return true;
+      return (
+        (r.userEmail || '').toLowerCase().includes(q) ||
+        (r.courseName || '').toLowerCase().includes(q) ||
+        (r.plan || '').toLowerCase().includes(q)
+      );
+    })
+    .filter(r => (visaEdPlanFilter === 'all' ? true : (r.plan === visaEdPlanFilter)))
+    .filter(r => (visaEdStatusFilter === 'all' ? true : (r.status === visaEdStatusFilter)));
+
   // Admin tabs configuration
   const adminTabs = [
     { value: 'overview', label: 'Overview', icon: BarChart3, description: 'Dashboard overview and analytics' },
@@ -315,7 +358,7 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
   ];
 
   return (
-    <div className="min-h-screen bg-background no-hscroll">
+    <div className="min-h-screen bg-background no-hscroll admin-strong-borders">
       {/* Header */}
       <div className="border-b border-border bg-card">
         <div className="site-container">
@@ -381,7 +424,7 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
 
       {/* Details Dialog (moved outside header) */}
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <DialogContent className="max-w-[95vw] w-[95vw] sm:w-full sm:max-w-xl rounded-2xl p-0 overflow-hidden flex flex-col max-h-[90vh]">
+        <DialogContent className="w-[100vw] max-w-[100vw] sm:max-w-2xl rounded-none sm:rounded-2xl p-0 overflow-hidden flex flex-col h-[95vh] sm:h-auto">
           <DialogHeader className="relative bg-gradient-to-r from-red-500 to-pink-500 text-white p-5">
             <button
               type="button"
@@ -400,7 +443,7 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
             <DialogDescription className="text-white/80">Full application information and quick actions</DialogDescription>
           </DialogHeader>
 
-          <div className="p-5 space-y-6 overflow-x-hidden overflow-y-auto flex-1">
+          <div className="p-4 sm:p-5 space-y-6 overflow-x-hidden overflow-y-auto flex-1 break-words">
             {detailsLoading ? (
               <div className="space-y-3">
                 <div className="h-4 w-40 bg-muted rounded animate-pulse" />
@@ -427,7 +470,7 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-xs text-muted-foreground">Email</p>
-                    <p className="truncate break-words">{selectedApp.userEmail || selectedApp.personalInfo?.email || '—'}</p>
+                    <p className="break-words">{selectedApp.userEmail || selectedApp.personalInfo?.email || '—'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Phone</p>
@@ -456,7 +499,7 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                     </div>
                     <div className="sm:col-span-2">
                       <p className="text-xs text-muted-foreground">Accommodation</p>
-                      <p className="truncate break-words">{selectedApp.travel?.accommodation || '—'}</p>
+                      <p className="break-words">{selectedApp.travel?.accommodation || '—'}</p>
                     </div>
                   </div>
                 </div>
@@ -514,7 +557,7 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
             )}
           </div>
 
-          <DialogFooter className="p-5 pt-0">
+          <DialogFooter className="p-4 sm:p-5 pt-0">
             {/* Primary contact actions above status controls with ample spacing */}
             <div className="grid grid-cols-2 gap-2 w-full mb-3">
               <Button variant="secondary" onClick={() => selectedAppId && navigator.clipboard.writeText(selectedAppId)}>
@@ -537,6 +580,97 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
               <Button variant="destructive" className="bg-red-600 hover:bg-red-700" onClick={() => updateSelectedStatus('rejected')}>
                 <XCircle className="w-4 h-4 mr-2" /> Reject
               </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* VisaEd: View Registration Dialog */}
+      <Dialog open={regViewOpen} onOpenChange={setRegViewOpen}>
+        <DialogContent className="w-[100vw] max-w-[100vw] sm:max-w-lg rounded-none sm:rounded-2xl p-0 overflow-hidden">
+          <DialogHeader className="relative bg-gradient-to-r from-red-500 to-pink-500 text-white p-5">
+            <DialogTitle className="text-white">Enrollment Details</DialogTitle>
+            <DialogDescription className="text-white/80">VisaEd registration overview</DialogDescription>
+          </DialogHeader>
+          <div className="p-5 space-y-4 text-sm">
+            {!selectedReg ? (
+              <div className="text-muted-foreground">No registration selected.</div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">Course</p>
+                  <p className="font-medium break-words">{selectedReg.courseName || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Plan</p>
+                  <p className="font-medium uppercase">{selectedReg.plan || 'free'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Status</p>
+                  <p className="font-medium">{selectedReg.status || 'registered'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">User Email</p>
+                  <p className="font-medium break-words">{selectedReg.userEmail || '—'}</p>
+                </div>
+                <div className="sm:col-span-2">
+                  <p className="text-xs text-muted-foreground">Registration ID</p>
+                  <p className="font-mono text-xs opacity-80 break-words">{selectedReg.id}</p>
+                </div>
+                {selectedReg.paymentRef && (
+                  <div className="sm:col-span-2">
+                    <p className="text-xs text-muted-foreground">Payment Ref</p>
+                    <p className="font-medium break-words">{selectedReg.paymentRef}</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <DialogFooter className="p-5 pt-0">
+            <div className="flex w-full justify-between gap-2">
+              <Button variant="outline" onClick={() => { if (selectedReg?.id) navigator.clipboard.writeText(selectedReg.id); }}>
+                <Clipboard className="w-4 h-4 mr-2" /> Copy ID
+              </Button>
+              <Button onClick={() => setRegViewOpen(false)} className="bg-gradient-to-r from-red-500 to-pink-500 text-white">Close</Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* VisaEd: Message Dialog */}
+      <Dialog open={regMsgOpen} onOpenChange={setRegMsgOpen}>
+        <DialogContent className="w-[100vw] max-w-[100vw] sm:max-w-lg rounded-none sm:rounded-2xl p-0 overflow-hidden">
+          <DialogHeader className="relative bg-gradient-to-r from-red-500 to-pink-500 text-white p-5">
+            <DialogTitle className="text-white">Message Enrollment</DialogTitle>
+            <DialogDescription className="text-white/80">Send an email to the registrant</DialogDescription>
+          </DialogHeader>
+          <div className="p-5 space-y-4">
+            <div className="text-sm">
+              <p className="text-xs text-muted-foreground">To</p>
+              <p className="font-medium break-words">{selectedReg?.userEmail || '—'}</p>
+            </div>
+            <textarea
+              value={regMsg}
+              onChange={(e) => setRegMsg(e.target.value)}
+              placeholder="Write your message…"
+              className="w-full h-32 bg-transparent border border-border rounded-md px-3 py-2 text-sm"
+            />
+          </div>
+          <DialogFooter className="p-5 pt-0">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full">
+              <Button variant="secondary" onClick={() => { if (selectedReg?.userEmail) navigator.clipboard.writeText(selectedReg.userEmail); }}>
+                <Clipboard className="w-4 h-4 mr-2" /> Copy Email
+              </Button>
+              <Button variant="outline" onClick={() => {
+                const to = selectedReg?.userEmail;
+                if (!to) return;
+                const subject = encodeURIComponent('UGS VisaEd — Support');
+                const body = encodeURIComponent(regMsg || '');
+                window.open(`mailto:${to}?subject=${subject}&body=${body}`);
+              }}>
+                <Mail className="w-4 h-4 mr-2" /> Open Mail
+              </Button>
+              <Button className="bg-gradient-to-r from-red-500 to-pink-500 text-white" onClick={() => setRegMsgOpen(false)}>Close</Button>
             </div>
           </DialogFooter>
         </DialogContent>
@@ -896,6 +1030,7 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
               </Button>
             </div>
 
+            {/* KPI cards (static for now) */}
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card>
                 <CardContent className="p-6">
@@ -942,6 +1077,96 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                 </CardContent>
               </Card>
             </div>
+
+            {/* Enrollments */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Enrollments</CardTitle>
+                <CardDescription>All VisaEd registrations across plans</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+                  <input
+                    value={visaEdSearch}
+                    onChange={(e) => setVisaEdSearch(e.target.value)}
+                    placeholder="Search by email, course or plan"
+                    className="w-full sm:max-w-sm bg-transparent border border-border rounded-md px-3 py-2 text-sm"
+                  />
+                  <div className="flex gap-2">
+                    <select value={visaEdPlanFilter} onChange={e => setVisaEdPlanFilter(e.target.value as any)} className="bg-transparent border border-border rounded-md px-2 py-2 text-sm">
+                      <option value="all">All Plans</option>
+                      <option value="free">Free</option>
+                      <option value="premium">Premium</option>
+                      <option value="luxury">Luxury</option>
+                    </select>
+                    <select value={visaEdStatusFilter} onChange={e => setVisaEdStatusFilter(e.target.value as any)} className="bg-transparent border border-border rounded-md px-2 py-2 text-sm">
+                      <option value="all">All Status</option>
+                      <option value="registered">Registered</option>
+                      <option value="active">Active</option>
+                      <option value="completed">Completed</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="mt-4">
+                  {visaEdLoading ? (
+                    <div className="text-sm text-muted-foreground">Loading enrollments…</div>
+                  ) : (
+                    <div className="overflow-x-auto rounded-xl border">
+                      <table className="min-w-full text-sm">
+                        <thead className="bg-muted/40">
+                          <tr className="text-left">
+                            <th className="px-4 py-3 font-medium">Course</th>
+                            <th className="px-4 py-3 font-medium">Plan</th>
+                            <th className="px-4 py-3 font-medium">Status</th>
+                            <th className="px-4 py-3 font-medium">Email</th>
+                            <th className="px-4 py-3 font-medium">ID</th>
+                            <th className="px-4 py-3 font-medium text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredVisaEdRegs.length === 0 ? (
+                            <tr>
+                              <td colSpan={6} className="px-4 py-6 text-center text-muted-foreground">No enrollments found</td>
+                            </tr>
+                          ) : (
+                            filteredVisaEdRegs.map((r) => (
+                              <tr key={r.id} className="border-t hover:bg-muted/20">
+                                <td className="px-4 py-3">
+                                  <div className="font-medium">{r.courseName || 'Course'}</div>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <Badge variant="secondary" className="uppercase text-[10px] tracking-wide">{r.plan || 'free'}</Badge>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <Badge className="text-[10px] tracking-wide">{r.status || 'registered'}</Badge>
+                                </td>
+                                <td className="px-4 py-3 max-w-[18rem]">
+                                  <div className="truncate" title={r.userEmail || ''}>{r.userEmail || '—'}</div>
+                                </td>
+                                <td className="px-4 py-3 max-w-[10rem]">
+                                  <div className="font-mono text-xs opacity-80 truncate" title={r.id}>{r.id}</div>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="flex items-center gap-2 justify-end">
+                                    <Button size="sm" variant="secondary" onClick={() => { setSelectedReg(r); setRegViewOpen(true); }}>
+                                      <Eye className="w-4 h-4 mr-2" /> View
+                                    </Button>
+                                    <Button size="sm" className="bg-gradient-to-r from-red-500 to-pink-500 text-white" onClick={() => { setSelectedReg(r); setRegMsgOpen(true); setRegMsg(''); }}>
+                                      <MessageSquare className="w-4 h-4 mr-2" /> Message
+                                    </Button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
             <Card>
               <CardHeader>

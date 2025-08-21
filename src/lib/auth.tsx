@@ -7,6 +7,7 @@ import {
   signInWithPopup,
   sendEmailVerification,
   reload,
+  sendPasswordResetEmail,
 } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
 import type { User } from "firebase/auth";
@@ -26,6 +27,7 @@ export type AuthContextType = {
   resendVerification: () => Promise<void>;
   requestOtp: () => Promise<void>;
   verifyOtp: (code: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
 };
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
@@ -171,9 +173,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!u.emailVerified) throw new Error("Email is not verified yet. Please click the link in your email, then try again.");
   }, []);
 
+  const resetPassword = React.useCallback(async (email: string) => {
+    setError(null);
+    try {
+      if (!isFirebaseConfigured || !auth) throw new Error("Service is temporarily unavailable. Please try again shortly.");
+      const trimmed = (email || "").trim();
+      if (!trimmed) throw new Error("Please enter a valid email address.");
+      await sendPasswordResetEmail(auth, trimmed);
+    } catch (e: any) {
+      const msg = friendlyAuthMessage(e);
+      setError(msg);
+      throw new Error(msg);
+    }
+  }, [friendlyAuthMessage]);
+
   const value: AuthContextType = React.useMemo(
-    () => ({ user, loading, error, signInWithEmail, signUpWithEmail, signInWithGoogle: signInWithGoogleCb, signOutUser, resendVerification, requestOtp, verifyOtp }),
-    [user, loading, error, signInWithEmail, signUpWithEmail, signInWithGoogleCb, signOutUser, resendVerification, requestOtp, verifyOtp]
+    () => ({ user, loading, error, signInWithEmail, signUpWithEmail, signInWithGoogle: signInWithGoogleCb, signOutUser, resendVerification, requestOtp, verifyOtp, resetPassword }),
+    [user, loading, error, signInWithEmail, signUpWithEmail, signInWithGoogleCb, signOutUser, resendVerification, requestOtp, verifyOtp, resetPassword]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

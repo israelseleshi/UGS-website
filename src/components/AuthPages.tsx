@@ -40,9 +40,13 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [tosOpen, setTosOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [infoMessage, setInfoMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotMessage, setForgotMessage] = useState('');
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -54,7 +58,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
     newsletterOptIn: false
   });
 
-  const { signInWithEmail, signUpWithEmail, error: authError, loading: authLoading } = useAuth();
+  const { signInWithEmail, signUpWithEmail, error: authError, loading: authLoading, resetPassword } = useAuth();
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -299,7 +303,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                         </button>
                       </div>
                       <div className="flex justify-end">
-                        <Button variant="link" className="px-0 text-xs bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent">Forgot password?</Button>
+                        <Button type="button" onClick={() => setForgotOpen(true)} variant="link" className="px-0 text-xs bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent">Forgot password?</Button>
                       </div>
                     </div>
                   </motion.div>
@@ -646,6 +650,65 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
             <p>We collect personal information such as your name, contact details, and travel documents solely to deliver visa and immigration services.</p>
             <p>Your data is encrypted in transit and at rest. We do not sell your data. Limited sharing may occur with consular authorities and trusted partners as required to deliver services.</p>
             <p>You may request deletion of your account or data at any time, subject to legal and regulatory retention requirements.</p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Forgot Password Dialog */}
+      <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
+        <DialogContent className="backdrop-blur-xl">
+          <DialogHeader>
+            <DialogTitle>Reset your password</DialogTitle>
+            <DialogDescription>Enter your account email. We'll send you a secure reset link.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {forgotMessage && (
+              <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-3 text-sm text-emerald-800 dark:text-emerald-200">
+                {forgotMessage}
+              </div>
+            )}
+            {!!loginError && (
+              <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-xl p-3 text-sm text-red-800 dark:text-red-200">
+                {loginError}
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="forgotEmail" className="text-sm">Email</Label>
+              <div className="relative">
+                <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <Input
+                  id="forgotEmail"
+                  type="email"
+                  placeholder="you@company.com"
+                  className="pl-10 bg-transparent"
+                  value={forgotEmail}
+                  onChange={(e) => { setForgotEmail(e.target.value); setLoginError(''); setForgotMessage(''); }}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setForgotOpen(false)} disabled={forgotLoading}>Cancel</Button>
+              <Button
+                type="button"
+                onClick={async () => {
+                  setLoginError('');
+                  setForgotMessage('');
+                  setForgotLoading(true);
+                  try {
+                    await resetPassword(forgotEmail);
+                    setForgotMessage('If an account exists for this email, a reset link has been sent. Please check your inbox.');
+                  } catch (e: any) {
+                    setLoginError(e?.message || 'Unable to send reset email.');
+                  } finally {
+                    setForgotLoading(false);
+                  }
+                }}
+                disabled={forgotLoading}
+                className="bg-gradient-to-r from-red-500 to-pink-500"
+              >
+                {forgotLoading ? 'Sending…' : 'Send reset link'}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

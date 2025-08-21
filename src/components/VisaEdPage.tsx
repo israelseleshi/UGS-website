@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+import { toast } from 'sonner';
+import { createVisaEdRegistration } from '../lib/db';
+import { useAuth } from '../lib/auth';
 import { Button } from './button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card';
 import { Input } from './input';
@@ -42,15 +45,50 @@ export function VisaEdPage({ onPageChange }: VisaEdPageProps) {
     preferredSchedule: '',
     agreeToTerms: false
   });
+  const [submitting, setSubmitting] = useState(false);
+  const [submittedId, setSubmittedId] = useState<string | null>(null);
+  const { user } = useAuth();
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setRegistrationData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('VisaEd Registration:', registrationData);
-    // Handle registration logic
+    if (submitting) return;
+    try {
+      setSubmitting(true);
+      const uid = user?.uid || 'guest';
+      const payload = {
+        uid,
+        userEmail: registrationData.email,
+        courseName: registrationData.visaType ? `${registrationData.visaType} Visa Path` : 'VisaEd Course',
+        plan: 'free' as const,
+        status: 'registered' as const,
+        form: {
+          firstName: registrationData.firstName,
+          lastName: registrationData.lastName,
+          email: registrationData.email,
+          phone: registrationData.phone,
+          currentLocation: registrationData.currentLocation,
+          targetCountry: registrationData.targetCountry,
+          visaType: registrationData.visaType,
+          experienceLevel: registrationData.experienceLevel,
+          learningGoals: registrationData.learningGoals,
+          preferredSchedule: registrationData.preferredSchedule,
+          agreeToTerms: registrationData.agreeToTerms,
+        },
+      };
+      const created = await createVisaEdRegistration(uid, payload);
+      setSubmittedId((created as any).id || null);
+      toast.success('You are registered for VisaEd! We sent details to your email.');
+      // Reset minimal fields but keep email for confirmation display
+      setRegistrationData(prev => ({ ...prev, firstName: '', lastName: '', phone: '', learningGoals: '' }));
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to register. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const features = [
@@ -275,6 +313,20 @@ export function VisaEdPage({ onPageChange }: VisaEdPageProps) {
                 </CardDescription>
               </CardHeader>
               <CardContent>
+                {submittedId ? (
+                  <div className="text-center space-y-4 py-8">
+                    <CheckCircle className="w-12 h-12 text-green-600 mx-auto" />
+                    <h3 className="text-xl font-semibold">Registration Successful</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Your VisaEd enrollment has been created. Confirmation was sent to {registrationData.email || 'your email'}.
+                    </p>
+                    <div className="text-xs text-muted-foreground">Ref: {submittedId}</div>
+                    <div className="flex gap-3 justify-center pt-2">
+                      <Button onClick={() => onPageChange('client-dashboard')}>Go to Dashboard</Button>
+                      <Button variant="outline" onClick={() => setSubmittedId(null)}>Register Another</Button>
+                    </div>
+                  </div>
+                ) : (
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-2">
@@ -411,11 +463,12 @@ export function VisaEdPage({ onPageChange }: VisaEdPageProps) {
                     </Label>
                   </div>
 
-                  <Button type="submit" size="lg" className="w-full bg-red-600 hover:bg-red-700 text-white">
-                    Register for VisaEd
-                    <ArrowRight className="w-5 h-5 ml-2" />
+                  <Button type="submit" size="lg" disabled={submitting} className="w-full bg-red-600 hover:bg-red-700 text-white">
+                    {submitting ? 'Registering…' : 'Register for VisaEd'}
+                    {!submitting && <ArrowRight className="w-5 h-5 ml-2" />}
                   </Button>
                 </form>
+                )}
               </CardContent>
             </Card>
           </div>

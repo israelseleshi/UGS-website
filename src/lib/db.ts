@@ -56,6 +56,93 @@ export async function listApplicationMessages(appId: string, pageSize = 50, curs
   return { items, nextCursor };
 }
 
+// ---- VisaEd Registrations ----
+export type VisaEdRegistration = {
+  uid: string;
+  userEmail?: string;
+  courseId?: string;
+  courseName?: string;
+  plan?: 'free' | 'premium' | 'luxury';
+  status?: 'registered' | 'active' | 'completed' | 'cancelled';
+  paymentRef?: string;
+  // Full form capture from VisaEd registration UI
+  form?: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+    currentLocation?: string; // country code or name
+    targetCountry?: string;   // country code or name
+    visaType?: string;        // tourist | student | work | immigration
+    experienceLevel?: string; // beginner | intermediate | advanced
+    learningGoals?: string;
+    preferredSchedule?: string; // weekdays | weekends | flexible
+    agreeToTerms?: boolean;
+  };
+  createdAt?: any;
+  updatedAt?: any;
+};
+
+export async function createVisaEdRegistration(uid: string, data: Partial<VisaEdRegistration> = {}) {
+  const colRef = collection(getDb(), 'visaEdRegistrations');
+  // Ensure a consistent form shape
+  const defaultForm = {
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    currentLocation: '',
+    targetCountry: '',
+    visaType: '',
+    experienceLevel: '',
+    learningGoals: '',
+    preferredSchedule: '',
+    agreeToTerms: false,
+  } as VisaEdRegistration['form'];
+
+  const docData: VisaEdRegistration & Record<string, any> = {
+    uid,
+    status: 'registered',
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    ...data,
+    form: { ...defaultForm, ...(data.form || {}) },
+  } as any;
+
+  const docRef = await addDoc(colRef, docData);
+  const snap = await getDoc(docRef);
+  return { id: docRef.id, ...(snap.data() as VisaEdRegistration) };
+}
+
+export async function getVisaEdRegistration(id: string) {
+  const ref = doc(getDb(), 'visaEdRegistrations', id);
+  const snap = await getDoc(ref);
+  return snap.exists() ? ({ id, ...(snap.data() as VisaEdRegistration) }) : null;
+}
+
+export async function updateVisaEdRegistration(id: string, data: Partial<VisaEdRegistration>) {
+  const ref = doc(getDb(), 'visaEdRegistrations', id);
+  await updateDoc(ref, { ...data, updatedAt: serverTimestamp() });
+}
+
+export async function deleteVisaEdRegistration(id: string) {
+  const ref = doc(getDb(), 'visaEdRegistrations', id);
+  await deleteDoc(ref);
+}
+
+export async function listVisaEdRegistrations(pageSize = 50, cursor?: QueryDocumentSnapshot) {
+  const baseQuery = query(
+    collection(getDb(), 'visaEdRegistrations'),
+    orderBy('createdAt', 'desc'),
+    limit(pageSize),
+  );
+  const q = cursor ? query(baseQuery, startAfter(cursor)) : baseQuery;
+  const snap = await getDocs(q);
+  const items = snap.docs.map(d => ({ id: d.id, ...(d.data() as VisaEdRegistration) }));
+  const nextCursor = snap.docs[snap.docs.length - 1];
+  return { items, nextCursor };
+}
+
 export async function sendApplicationMessage(appId: string, msg: { text: string; byUid: string; byRole?: 'admin' | 'user' }) {
   const ref = collection(getDb(), 'visaApplications', appId, 'messages');
   const docRef = await addDoc(ref, { ...msg, createdAt: serverTimestamp() });
@@ -91,6 +178,7 @@ export async function ensureBaseCollections() {
   const placeholders: Array<[string, string, Record<string, any>]> = [
     ["users", "_seed", { _type: "seed", createdAt: now }],
     ["visaApplications", "_seed", { _type: "seed", createdAt: now }],
+    ["visaEdRegistrations", "_seed", { _type: "seed", createdAt: now }],
     ["documents", "_seed", { _type: "seed", createdAt: now }],
     ["payments", "_seed", { _type: "seed", createdAt: now }],
     ["messages", "_seed", { _type: "seed", createdAt: now }],

@@ -386,3 +386,40 @@ html {
     width: 100%;
   }
 }
+
+/* ==========================================
+   Admin Dashboard: Stronger Borders & Contrast
+   Scope: only inside .admin-strong-borders wrapper
+   ========================================== */
+.admin-strong-borders [data-slot="card"],
+.admin-strong-borders .border,
+.admin-strong-borders .border-border {
+  border-width: 2px !important;
+  border-color: hsl(var(--border) / 0.9) !important;
+}
+
+.admin-strong-borders .border-b,
+.admin-strong-borders .border-t,
+.admin-strong-borders .border-l,
+.admin-strong-borders .border-r {
+  border-width: 2px !important;
+}
+
+.admin-strong-borders [data-slot="card"] {
+  border-radius: 0.875rem; /* keep rounded-xl feel */
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.06),
+    0 6px 16px rgba(0, 0, 0, 0.05);
+}
+
+.dark .admin-strong-borders [data-slot="card"],
+.dark .admin-strong-borders .border,
+.dark .admin-strong-borders .border-border {
+  border-color: hsl(var(--border) / 0.7) !important;
+}
+
+.dark .admin-strong-borders [data-slot="card"] {
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04),
+    0 6px 16px rgba(0, 0, 0, 0.5);
+}

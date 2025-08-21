@@ -90,6 +90,13 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    // VisaEd registrations: allow admin full access; allow verified users to create and read their own
+    match /visaEdRegistrations/{regId} {
+      allow read: if isAdmin() || (isVerified() && resource.data.uid == request.auth.uid);
+      allow create: if isAdmin() || (isVerified() && request.resource.data.uid == request.auth.uid);
+      allow update, delete: if isAdmin();
+    }
+
     // Settings: read-only to verified users; write admin only
     match /settings/{doc} {
       allow read: if isVerified() || isAdmin();
