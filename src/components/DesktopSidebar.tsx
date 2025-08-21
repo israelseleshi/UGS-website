@@ -35,6 +35,8 @@ export function DesktopSidebar({ items, selected, onSelect, className = '', coll
                   ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white shadow'
                   : 'hover:bg-black/[0.04] dark:hover:bg-white/5'
               }`}
+              title={collapsed ? it.label : undefined}
+              aria-label={it.label}
             >
               <span className="flex items-center gap-2">
                 {Icon ? <Icon className="w-4 h-4" /> : null}

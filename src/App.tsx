@@ -209,8 +209,8 @@ export default function App() {
         className="min-h-screen no-hscroll"
       >
         {/* Hero Section */}
-        <section className="py-16 bg-gradient-to-br from-primary/5 via-background to-red-50/30 dark:from-primary/10 dark:via-background dark:to-red-950/20">
-          <div className="site-container text-center">
+        <section className="py-24 md:py-28 bg-gradient-to-b from-primary/5 via-background to-transparent dark:from-primary/10 dark:via-background dark:to-transparent">
+          <div className="site-container site-max text-center">
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -222,7 +222,7 @@ export default function App() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="text-xl text-muted-foreground max-w-3xl mx-auto mb-8"
+              className="text-xl text-muted-foreground max-w-3xl mx-auto mb-10"
             >
               Comprehensive visa and immigration solutions designed to make your global journey seamless and successful
             </motion.p>
@@ -249,16 +249,16 @@ export default function App() {
         </section>
 
         {/* Services Detail */}
-        <section className="py-12 md:py-16">
-          <div className="site-container">
-            <div className="space-y-16">
+        <section className="pt-16 pb-28 md:pt-20 md:pb-32">
+          <div className="site-container site-max">
+            <div className="space-y-24 md:space-y-28">
               {services.map((service, index) => (
                 <motion.div
                   key={index}
                   initial={{ opacity: 0, y: 40 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 + index * 0.1 }}
-                  className={`grid lg:grid-cols-2 gap-8 md:gap-10 lg:gap-12 items-center ${index % 2 === 1 ? 'lg:grid-flow-col-dense' : ''}`}
+                  className={`grid lg:grid-cols-2 gap-10 lg:gap-16 items-center ${index % 2 === 1 ? 'lg:grid-flow-col-dense' : ''}`}
                 >
                   <div className={`space-y-5 ${index % 2 === 1 ? 'lg:col-start-2' : ''}`}>
                     <div className="flex items-center space-x-3 mb-4">
@@ -287,7 +287,7 @@ export default function App() {
                       ))}
                     </div>
 
-                    <div className="flex flex-col sm:flex-row gap-3 pt-3">
+                    <div className="flex flex-col sm:flex-row gap-3 pt-4">
                       <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                         <Button 
                           size="lg" 
@@ -314,13 +314,13 @@ export default function App() {
                     whileHover={{ scale: 1.02 }}
                     className={`relative ${index % 2 === 1 ? 'lg:col-start-1' : ''}`}
                   >
-                    <div className="relative overflow-hidden rounded-2xl shadow-xl">
+                    <div className="relative overflow-hidden rounded-3xl shadow-2xl ring-1 ring-border/40 bg-card">
                       <ImageWithFallback
                         src={service.image}
                         alt={service.title}
-                        className="w-full h-80 lg:h-96 object-cover"
+                        className="w-full h-80 lg:h-[420px] object-cover"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/15 to-transparent" />
                     </div>
                   </motion.div>
                 </motion.div>
@@ -330,8 +330,8 @@ export default function App() {
         </section>
 
         {/* CTA Section */}
-        <section className="py-16 bg-muted/30">
-          <div className="site-container text-center">
+        <section className="py-24 md:py-28 bg-muted/30">
+          <div className="site-container site-max text-center">
             <motion.h2
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -389,8 +389,8 @@ export default function App() {
       className="min-h-screen"
     >
       {/* Hero Section */}
-      <section className="py-20 bg-gradient-to-br from-blue-50 via-background to-indigo-50/30 dark:from-blue-950/20 dark:via-background dark:to-indigo-950/10">
-        <div className="container mx-auto text-center">
+      <section className="py-24 md:py-28 bg-gradient-to-br from-blue-50 via-background to-indigo-50/30 dark:from-blue-950/20 dark:via-background dark:to-indigo-950/10">
+        <div className="site-container site-max text-center">
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -410,8 +410,8 @@ export default function App() {
       </section>
 
       {/* Content */}
-      <section className="py-20">
-        <div className="container mx-auto">
+      <section className="pt-16 pb-28 md:pt-20 md:pb-32">
+        <div className="site-container site-max">
           <div className="max-w-4xl mx-auto space-y-12">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -441,7 +441,7 @@ export default function App() {
                   transition={{ delay: 0.3 + index * 0.1 }}
                   whileHover={{ scale: 1.05 }}
                 >
-                  <Card className="text-center h-full">
+                  <Card className="text-center h-full rounded-2xl shadow-sm ring-1 ring-border/50">
                     <CardContent className="p-6">
                       <div className="w-12 h-12 bg-primary/10 rounded-xl mx-auto mb-4 flex items-center justify-center">
                         <item.icon className="w-6 h-6 text-primary" />

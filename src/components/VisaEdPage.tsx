@@ -110,8 +110,8 @@ export function VisaEdPage({ onPageChange }: VisaEdPageProps) {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="py-20 bg-gradient-to-br from-blue-50 via-background to-indigo-50/30 dark:from-blue-950/20 dark:via-background dark:to-indigo-950/10">
-        <div className="w-full section-inner">
+      <section className="py-24 md:py-28 bg-gradient-to-br from-blue-50 via-background to-indigo-50/30 dark:from-blue-950/20 dark:via-background dark:to-indigo-950/10">
+        <div className="site-container site-max">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-8">
               <div className="space-y-6">
@@ -178,8 +178,8 @@ export function VisaEdPage({ onPageChange }: VisaEdPageProps) {
       </section>
 
       {/* Features Section */}
-      <section className="py-20">
-        <div className="w-full section-inner">
+      <section className="py-24 md:py-28">
+        <div className="site-container site-max">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Why Choose VisaEd?</h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
@@ -187,9 +187,9 @@ export function VisaEdPage({ onPageChange }: VisaEdPageProps) {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10">
             {features.map((feature, index) => (
-              <Card key={index} className="text-center hover:shadow-lg transition-shadow">
+              <Card key={index} className="text-center rounded-2xl ring-1 ring-border/50 hover:shadow-xl transition-shadow">
                 <CardContent className="p-6">
                   <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl mx-auto mb-4 flex items-center justify-center">
                     <feature.icon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
@@ -204,8 +204,8 @@ export function VisaEdPage({ onPageChange }: VisaEdPageProps) {
       </section>
 
       {/* Courses Section */}
-      <section className="py-20 bg-muted/30">
-        <div className="w-full section-inner">
+      <section className="py-24 md:py-28 bg-muted/30">
+        <div className="site-container site-max">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Popular Courses</h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
@@ -213,11 +213,11 @@ export function VisaEdPage({ onPageChange }: VisaEdPageProps) {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
             {courses.map((course, index) => (
-              <Card key={index} className="group hover:shadow-lg transition-shadow">
+              <Card key={index} className="group rounded-2xl ring-1 ring-border/50 hover:shadow-xl transition-shadow">
                 <CardContent className="p-0">
-                  <div className="relative h-48 overflow-hidden">
+                  <div className="relative h-56 lg:h-64 overflow-hidden">
                     <ImageWithFallback
                       src={course.image}
                       alt={course.title}
@@ -257,9 +257,9 @@ export function VisaEdPage({ onPageChange }: VisaEdPageProps) {
       </section>
 
       {/* Registration Form Section */}
-      <section className="py-20" id="register">
-        <div className="w-full section-inner">
-          <div className="max-w-4xl mx-auto">
+      <section className="py-24 md:py-28" id="register">
+        <div className="site-container site-max">
+          <div className="max-w-3xl mx-auto">
             <div className="text-center mb-12">
               <h2 className="text-3xl md:text-4xl font-bold mb-4">Register for VisaEd</h2>
               <p className="text-xl text-muted-foreground">
@@ -267,7 +267,7 @@ export function VisaEdPage({ onPageChange }: VisaEdPageProps) {
               </p>
             </div>
 
-            <Card className="shadow-xl">
+            <Card className="shadow-xl rounded-2xl ring-1 ring-border/50">
               <CardHeader>
                 <CardTitle className="text-2xl">Personal Information</CardTitle>
                 <CardDescription>
@@ -281,28 +281,14 @@ export function VisaEdPage({ onPageChange }: VisaEdPageProps) {
                       <Label htmlFor="firstName">First Name</Label>
                       <div className="relative">
                         <User className="w-4 h-4 absolute left-3 top-3.5 text-muted-foreground" />
-                        <Input
-                          id="firstName"
-                          placeholder="John"
-                          className="pl-10"
-                          value={registrationData.firstName}
-                          onChange={(e) => handleInputChange('firstName', e.target.value)}
-                          required
-                        />
+                        <Input id="firstName" placeholder="John" className="pl-10" value={registrationData.firstName} onChange={(e) => handleInputChange('firstName', e.target.value)} required />
                       </div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="lastName">Last Name</Label>
                       <div className="relative">
                         <User className="w-4 h-4 absolute left-3 top-3.5 text-muted-foreground" />
-                        <Input
-                          id="lastName"
-                          placeholder="Doe"
-                          className="pl-10"
-                          value={registrationData.lastName}
-                          onChange={(e) => handleInputChange('lastName', e.target.value)}
-                          required
-                        />
+                        <Input id="lastName" placeholder="Doe" className="pl-10" value={registrationData.lastName} onChange={(e) => handleInputChange('lastName', e.target.value)} required />
                       </div>
                     </div>
                   </div>
@@ -312,29 +298,14 @@ export function VisaEdPage({ onPageChange }: VisaEdPageProps) {
                       <Label htmlFor="email">Email Address</Label>
                       <div className="relative">
                         <Mail className="w-4 h-4 absolute left-3 top-3.5 text-muted-foreground" />
-                        <Input
-                          id="email"
-                          type="email"
-                          placeholder="john@example.com"
-                          className="pl-10"
-                          value={registrationData.email}
-                          onChange={(e) => handleInputChange('email', e.target.value)}
-                          required
-                        />
+                        <Input id="email" type="email" placeholder="john@example.com" className="pl-10" value={registrationData.email} onChange={(e) => handleInputChange('email', e.target.value)} required />
                       </div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="phone">Phone Number</Label>
                       <div className="relative">
                         <Phone className="w-4 h-4 absolute left-3 top-3.5 text-muted-foreground" />
-                        <Input
-                          id="phone"
-                          type="tel"
-                          placeholder="+1 (555) 000-0000"
-                          className="pl-10"
-                          value={registrationData.phone}
-                          onChange={(e) => handleInputChange('phone', e.target.value)}
-                        />
+                        <Input id="phone" type="tel" placeholder="+1 (555) 000-0000" className="pl-10" value={registrationData.phone} onChange={(e) => handleInputChange('phone', e.target.value)} />
                       </div>
                     </div>
                   </div>
@@ -376,11 +347,7 @@ export function VisaEdPage({ onPageChange }: VisaEdPageProps) {
 
                   <div className="space-y-2">
                     <Label>Visa Type of Interest</Label>
-                    <RadioGroup 
-                      value={registrationData.visaType}
-                      onValueChange={(value) => handleInputChange('visaType', value)}
-                      className="grid grid-cols-2 md:grid-cols-4 gap-4"
-                    >
+                    <RadioGroup value={registrationData.visaType} onValueChange={(value) => handleInputChange('visaType', value)} className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="tourist" id="tourist" />
                         <Label htmlFor="tourist" className="text-sm">Tourist</Label>
@@ -416,22 +383,12 @@ export function VisaEdPage({ onPageChange }: VisaEdPageProps) {
 
                   <div className="space-y-2">
                     <Label htmlFor="learningGoals">Learning Goals</Label>
-                    <Textarea
-                      id="learningGoals"
-                      placeholder="What do you hope to achieve through VisaEd? (Optional)"
-                      className="min-h-[100px]"
-                      value={registrationData.learningGoals}
-                      onChange={(e) => handleInputChange('learningGoals', e.target.value)}
-                    />
+                    <Textarea id="learningGoals" placeholder="What do you hope to achieve through VisaEd? (Optional)" className="min-h-[150px]" value={registrationData.learningGoals} onChange={(e) => handleInputChange('learningGoals', e.target.value)} />
                   </div>
 
                   <div className="space-y-2">
                     <Label>Preferred Learning Schedule</Label>
-                    <RadioGroup 
-                      value={registrationData.preferredSchedule}
-                      onValueChange={(value) => handleInputChange('preferredSchedule', value)}
-                      className="grid md:grid-cols-3 gap-4"
-                    >
+                    <RadioGroup value={registrationData.preferredSchedule} onValueChange={(value) => handleInputChange('preferredSchedule', value)} className="grid md:grid-cols-3 gap-4">
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="weekdays" id="weekdays" />
                         <Label htmlFor="weekdays" className="text-sm">Weekday evenings</Label>
@@ -448,18 +405,13 @@ export function VisaEdPage({ onPageChange }: VisaEdPageProps) {
                   </div>
 
                   <div className="flex items-start space-x-3">
-                    <Checkbox 
-                      id="terms" 
-                      checked={registrationData.agreeToTerms}
-                      onCheckedChange={(checked) => handleInputChange('agreeToTerms', checked as boolean)}
-                      required
-                    />
+                    <Checkbox id="terms" checked={registrationData.agreeToTerms} onCheckedChange={(checked) => handleInputChange('agreeToTerms', checked as boolean)} required />
                     <Label htmlFor="terms" className="text-sm leading-relaxed">
                       I agree to VisaEd's Terms of Service and Privacy Policy. I consent to receiving educational materials and course updates via email.
                     </Label>
                   </div>
 
-                  <Button type="submit" size="lg" className="w-full">
+                  <Button type="submit" size="lg" className="w-full bg-red-600 hover:bg-red-700 text-white">
                     Register for VisaEd
                     <ArrowRight className="w-5 h-5 ml-2" />
                   </Button>
@@ -472,3 +424,4 @@ export function VisaEdPage({ onPageChange }: VisaEdPageProps) {
     </div>
   );
 }
+ 

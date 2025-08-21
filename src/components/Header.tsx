@@ -15,6 +15,16 @@ export function Header({ currentPage, onPageChange, theme, onThemeChange }: Head
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const { user, signOutUser } = useAuth();
 
+  // Prefer first name when available
+  const firstName = React.useMemo(() => {
+    const name = user?.displayName?.trim();
+    if (name) {
+      const first = name.split(/\s+/)[0];
+      return first;
+    }
+    return user?.email?.split('@')[0] || 'User';
+  }, [user?.displayName, user?.email]);
+
   const navigation = [
     { name: 'Home', id: 'home' },
     { name: 'Services', id: 'services' },
@@ -70,13 +80,13 @@ export function Header({ currentPage, onPageChange, theme, onThemeChange }: Head
             
             {user ? (
               <div className="hidden sm:flex items-center space-x-3">
-                <div className="flex items-center space-x-2 px-2 py-1.5 bg-green-50 dark:bg-green-950/20 rounded-full border border-green-200 dark:border-green-800">
-                  <Avatar className="w-6 h-6 overflow-hidden rounded-full">
+                <div className="flex items-center space-x-2 px-2.5 py-1.5 bg-green-50 dark:bg-green-950/20 rounded-full border border-green-200 dark:border-green-800">
+                  <Avatar className="w-8 h-8 overflow-hidden rounded-full">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     {user.photoURL ? <img src={user.photoURL} alt="me" className="w-full h-full object-cover" /> : <div className="w-full h-full bg-primary/20" />}
                   </Avatar>
                   <span className="text-sm text-green-700 dark:text-green-300 font-medium truncate max-w-[140px]">
-                    {user.displayName || user.email?.split('@')[0] || 'User'}
+                    {firstName}
                   </span>
                 </div>
                 <Button 
@@ -150,7 +160,7 @@ export function Header({ currentPage, onPageChange, theme, onThemeChange }: Head
                   <div className="flex items-center space-x-2 p-2 bg-green-50 dark:bg-green-950/20 rounded-lg">
                     <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                     <span className="text-sm text-green-700 dark:text-green-300 font-medium">
-                      {user.displayName || user.email?.split('@')[0] || 'User'}
+                      {firstName}
                     </span>
                   </div>
                   <Button 

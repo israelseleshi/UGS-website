@@ -729,8 +729,8 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-background to-orange-50/30 dark:from-red-950/10 dark:via-background dark:to-orange-950/5">
-      <div className="w-full section-inner py-8">
+    <div className="min-h-screen no-hscroll bg-gradient-to-br from-red-50 via-background to-orange-50/30 dark:from-red-950/10 dark:via-background dark:to-orange-950/5">
+      <div className="site-container site-max py-8">
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl md:text-4xl font-bold mb-2">Visa Service Request</h1>
@@ -756,7 +756,7 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
         {/* Form Content */}
         <div className="max-w-4xl mx-auto">
           <Card className="shadow-xl">
-            <CardContent className="p-8">
+            <CardContent className="p-6 md:p-8">
               <form onSubmit={handleSubmit}>
                 {renderStepContent()}
                 

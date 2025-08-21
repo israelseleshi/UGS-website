@@ -64,12 +64,12 @@ export function HomePage({ onPageChange }: HomePageProps) {
   return (
   <div className="min-h-screen bg-hero-diagonal relative no-hscroll">
       {/* Hero Section */}
-      <section className="relative min-h-[calc(100vh-5rem)] py-10 md:py-20 flex items-center overflow-hidden">
+      <section className="relative min-h-[calc(100vh-5rem)] py-12 md:py-24 flex items-center overflow-hidden">
         {/* layered subtle gradients */}
         <div className="pointer-events-none absolute inset-0 bg-hero-radial" />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-transparent dark:from-primary/20 dark:via-background dark:to-transparent" />
         <div className="pointer-events-none absolute -right-40 top-1/3 h-[600px] w-[600px] rounded-full bg-gradient-to-tr from-primary/20 to-transparent blur-3xl opacity-50 dark:opacity-40" />
-        <div className="relative z-10 site-container">
+        <div className="relative z-10 site-container site-max">
           <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
             <div className="space-y-8">
               <div className="space-y-6">
@@ -123,11 +123,11 @@ export function HomePage({ onPageChange }: HomePageProps) {
             </div>
 
             <div className="relative">
-              {/* Decorative rotated panel behind card */}
-              <div className="pointer-events-none absolute left-1/2 top-8 -z-10 h-[440px] w-[480px] -translate-x-1/2 -rotate-6 rounded-3xl bg-gradient-to-br from-primary/30 to-red-700/25 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)] ring-1 ring-primary/20 dark:from-primary/25 dark:to-red-900/25" />
-              <div className="pointer-events-none absolute left-1/2 top-16 -z-20 h-[440px] w-[480px] -translate-x-1/2 -rotate-12 rounded-3xl bg-gradient-to-tr from-primary/10 via-background/40 to-transparent blur-xl" />
+              {/* Decorative rotated panels behind card */}
+              <div className="pointer-events-none absolute left-1/2 top-8 z-10 h-[440px] w-[480px] lg:h-[520px] lg:w-[560px] -translate-x-1/2 -rotate-6 rounded-3xl bg-gradient-to-br from-primary/30 to-red-700/25 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)] ring-1 ring-primary/20 dark:from-primary/25 dark:to-red-900/25" />
+              <div className="pointer-events-none absolute left-1/2 top-16 z-0 h-[440px] w-[480px] lg:h-[520px] lg:w-[560px] -translate-x-1/2 -rotate-12 rounded-3xl bg-gradient-to-tr from-primary/10 via-background/40 to-transparent blur-xl" />
 
-              <div className="relative mx-auto w-full max-w-lg animate-scale-in">
+              <div className="relative z-20 mx-auto w-full max-w-lg lg:max-w-xl animate-scale-in">
                 <div className="group relative rounded-[2.25rem] bg-gradient-to-b from-foreground/[0.08] to-foreground/[0.04] p-[2px] shadow-xl ring-1 ring-border/40 backdrop-blur-sm supports-[backdrop-filter]:bg-foreground/5">
                   <div className="rounded-[2rem] bg-card/95 supports-[backdrop-filter]:bg-card/90 px-8 pt-8 pb-10">
                     <div className="relative overflow-hidden rounded-2xl ring-1 ring-border/20 shadow-inner">
@@ -151,8 +151,8 @@ export function HomePage({ onPageChange }: HomePageProps) {
       </section>
 
       {/* Stats Section */}
-      <section className="relative py-12 md:py-16 border-y border-border/60 bg-background/60">
-        <div className="relative site-container">
+      <section className="relative py-20 md:py-24 border-y border-border/60 bg-background/60">
+        <div className="relative site-container site-max">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-10 lg:gap-16">
             {stats.map((stat, index) => (
               <div key={index} className="text-center space-y-3">
@@ -168,10 +168,9 @@ export function HomePage({ onPageChange }: HomePageProps) {
       </section>
 
       {/* Services Section */}
-      <section className="py-16 md:py-20">
-        <div className="site-container">
-          <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12">
+      <section className="pt-24 pb-28 md:pt-28 md:pb-32">
+        <div className="site-container site-max">
+          <div className="text-center mb-14 md:mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Our Services</h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Comprehensive visa and immigration solutions tailored to your unique needs
@@ -214,7 +213,7 @@ export function HomePage({ onPageChange }: HomePageProps) {
             ))}
           </div>
 
-          <div className="text-center mt-12">
+          <div className="text-center mt-12 md:mt-14">
             <Button 
               size="lg" 
               onClick={() => onPageChange('services')}
@@ -224,15 +223,14 @@ export function HomePage({ onPageChange }: HomePageProps) {
               <ArrowRight className="w-5 h-5 ml-2" />
             </Button>
           </div>
-          </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="relative py-20 md:py-24 overflow-hidden">
+      <section className="relative py-24 md:py-28 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-red-500 via-red-600 to-red-700" />
         <div className="absolute inset-0 opacity-40 mix-blend-overlay bg-[radial-gradient(circle_at_20%_20%,white_.5%,transparent_60%)]" />
-        <div className="relative site-container text-center">
+        <div className="relative site-container site-max text-center">
           <div className="space-y-10 text-white">
             <h2 className="text-3xl md:text-4xl font-bold">Ready to Begin Your Journey?</h2>
             <p className="text-xl opacity-90 max-w-3xl mx-auto leading-relaxed">

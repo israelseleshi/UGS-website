@@ -77,6 +77,7 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const isMobile = useIsMobile();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false); // State for sidebar collapse
+  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [detailsLoading, setDetailsLoading] = useState(false);
   // Keep unsubscribe handle for messages
@@ -542,14 +543,18 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
       </Dialog>
 
       {/* Main Content */}
-      {/* Fixed left desktop sidebar to mirror mobile positioning */}
-      <div className="hidden lg:block fixed left-0 top-16 z-30 h-[calc(100vh-4rem)] py-2">
-        <div className={`${isSidebarCollapsed ? 'w-16' : 'w-64'} h-full px-2`}>
+      {/* Fixed left desktop sidebar; expands on hover when collapsed (Gemini-like) */}
+      <div
+        className="hidden lg:block fixed left-0 top-16 z-30 h-[calc(100vh-4rem)] py-2"
+        onMouseEnter={() => setIsSidebarHovered(true)}
+        onMouseLeave={() => setIsSidebarHovered(false)}
+      >
+        <div className={`${(isSidebarCollapsed && !isSidebarHovered) ? 'w-16' : 'w-64'} h-full px-2`}>
           <DesktopSidebar
             items={adminTabs as any}
             selected={selectedTab}
             onSelect={setSelectedTab}
-            collapsed={isSidebarCollapsed}
+            collapsed={isSidebarCollapsed && !isSidebarHovered}
             onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           />
         </div>
@@ -569,6 +574,7 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
               onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
             />
           </div>
+          {/* Note: content margin depends only on base collapsed state to avoid shifting on hover */}
           <div className={`col-span-12 lg:col-span-12 ${isSidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
             <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
               <TabsContent value="overview" className="space-y-6">

@@ -25,6 +25,8 @@ import {
 import { useAuth } from '../lib/auth';
 import { upsertUser } from '../lib/db';
 import { auth } from '../lib/firebase';
+import { updateProfile, reload } from 'firebase/auth';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './dialog';
 
 interface AuthPagesProps {
   type: 'signin' | 'signup';
@@ -35,6 +37,9 @@ interface AuthPagesProps {
 
 export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: AuthPagesProps) {
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [tosOpen, setTosOpen] = useState(false);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [infoMessage, setInfoMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -83,6 +88,14 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
         try {
           const u = auth?.currentUser;
           if (u) {
+            // Update Firebase Auth display name so the header shows first name instead of email
+            const fullName = `${(formData.firstName || '').trim()} ${(formData.lastName || '').trim()}`.trim();
+            if (fullName) {
+              try {
+                await updateProfile(u, { displayName: fullName });
+                try { await reload(u); } catch {}
+              } catch {}
+            }
             await upsertUser({
               uid: u.uid,
               email: u.email ?? formData.email,
@@ -92,7 +105,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
               // These are optional in rules and safe for signed-in users
               // Avoid writing role from client
               // Additional custom fields are allowed
-              fullName: `${formData.firstName} ${formData.lastName}`.trim(),
+              fullName: fullName,
               phone: formData.phone || undefined,
               photoURL: u.photoURL ?? null,
             } as any);
@@ -249,48 +262,48 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                   )}
                 </AnimatePresence>
 
-                {/* Core Credentials */}
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="space-y-5">
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-sm">Email</Label>
-                    <div className="relative">
-                      <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="you@company.com"
-                        className="pl-10 bg-transparent border-0 border-b border-black/10 dark:border-white/10 rounded-none focus-visible:ring-0"
-                        value={formData.email}
-                        onChange={(e) => handleInputChange('email', e.target.value)}
-                        required
-                      />
+                {/* Core Credentials (signin only) */}
+                {type === 'signin' && (
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="space-y-5">
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="text-sm">Email <span className="text-red-500">*</span></Label>
+                      <div className="relative">
+                        <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <Input
+                          id="email"
+                          type="email"
+                          placeholder="you@company.com"
+                          className="pl-10 bg-transparent border-0 border-b border-black/10 dark:border-white/10 rounded-none focus-visible:ring-0"
+                          value={formData.email}
+                          onChange={(e) => handleInputChange('email', e.target.value)}
+                          required
+                        />
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="password" className="text-sm">Password</Label>
-                    <div className="relative">
-                      <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                      <Input
-                        id="password"
-                        type={showPassword ? 'text' : 'password'}
-                        placeholder="••••••••"
-                        className="pl-10 pr-10 bg-transparent border-0 border-b border-black/10 dark:border-white/10 rounded-none focus-visible:ring-0"
-                        value={formData.password}
-                        onChange={(e) => handleInputChange('password', e.target.value)}
-                        required
-                      />
-                      <button type="button" aria-label="Toggle password" onClick={() => setShowPassword((v) => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                    {type === 'signin' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="password" className="text-sm">Password <span className="text-red-500">*</span></Label>
+                      <div className="relative">
+                        <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <Input
+                          id="password"
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder="••••••••"
+                          className="pl-10 pr-10 bg-transparent border-0 border-b border-black/10 dark:border-white/10 rounded-none focus-visible:ring-0"
+                          value={formData.password}
+                          onChange={(e) => handleInputChange('password', e.target.value)}
+                          required
+                        />
+                        <button type="button" aria-label="Toggle password" onClick={() => setShowPassword((v) => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
                       <div className="flex justify-end">
                         <Button variant="link" className="px-0 text-xs bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent">Forgot password?</Button>
                       </div>
-                    )}
-                  </div>
-                </motion.div>
+                    </div>
+                  </motion.div>
+                )}
 
                 {type === 'signup' && (
                   <motion.div
@@ -299,10 +312,10 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                     transition={{ delay: 0.4 }}
                     className="space-y-5"
                   >
-                    {/* Names */}
+                    {/* Names (required) */}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="firstName" className="text-sm">First name</Label>
+                        <Label htmlFor="firstName" className="text-sm">First name <span className="text-red-500">*</span></Label>
                         <div className="relative">
                           <User className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                           <Input
@@ -316,7 +329,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="lastName" className="text-sm">Last name</Label>
+                        <Label htmlFor="lastName" className="text-sm">Last name <span className="text-red-500">*</span></Label>
                         <div className="relative">
                           <User className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                           <Input
@@ -331,7 +344,64 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                       </div>
                     </div>
 
-                    {/* Phone */}
+                    {/* Email (required) */}
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="text-sm">Email <span className="text-red-500">*</span></Label>
+                      <div className="relative">
+                        <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <Input
+                          id="email"
+                          type="email"
+                          placeholder="you@company.com"
+                          className="pl-10 bg-transparent border-0 border-b border-black/10 dark:border-white/10 rounded-none focus-visible:ring-0"
+                          value={formData.email}
+                          onChange={(e) => handleInputChange('email', e.target.value)}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    {/* Password (required) */}
+                    <div className="space-y-2">
+                      <Label htmlFor="password" className="text-sm">Password <span className="text-red-500">*</span></Label>
+                      <div className="relative">
+                        <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <Input
+                          id="password"
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder="••••••••"
+                          className="pl-10 pr-10 bg-transparent border-0 border-b border-black/10 dark:border-white/10 rounded-none focus-visible:ring-0"
+                          value={formData.password}
+                          onChange={(e) => handleInputChange('password', e.target.value)}
+                          required
+                        />
+                        <button type="button" aria-label="Toggle password" onClick={() => setShowPassword((v) => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Confirm Password (required) */}
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmPassword" className="text-sm">Confirm password <span className="text-red-500">*</span></Label>
+                      <div className="relative">
+                        <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <Input
+                          id="confirmPassword"
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          placeholder="••••••••"
+                          className="pl-10 pr-10 bg-transparent border-0 border-b border-black/10 dark:border-white/10 rounded-none focus-visible:ring-0"
+                          value={formData.confirmPassword}
+                          onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                          required
+                        />
+                        <button type="button" aria-label="Toggle confirm password" onClick={() => setShowConfirmPassword((v) => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                          {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Phone (optional) */}
                     <div className="space-y-2">
                       <Label htmlFor="phone" className="text-sm">Phone (optional)</Label>
                       <div className="relative">
@@ -347,23 +417,6 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                       </div>
                     </div>
 
-                    {/* Confirm Password */}
-                    <div className="space-y-2">
-                      <Label htmlFor="confirmPassword" className="text-sm">Confirm password</Label>
-                      <div className="relative">
-                        <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <Input
-                          id="confirmPassword"
-                          type="password"
-                          placeholder="••••••••"
-                          className="pl-10 bg-transparent border-0 border-b border-black/10 dark:border-white/10 rounded-none focus-visible:ring-0"
-                          value={formData.confirmPassword}
-                          onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                          required
-                        />
-                      </div>
-                    </div>
-
                     {/* Agreements */}
                     <motion.div
                       initial={{ opacity: 0, y: 20 }}
@@ -371,7 +424,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                       transition={{ delay: 0.9 }}
                       className="space-y-4"
                     >
-                      <div className="site-container">
+                      <div className="flex items-start gap-3">
                         <Checkbox 
                           id="terms" 
                           checked={formData.agreeToTerms}
@@ -380,13 +433,13 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                         />
                         <Label htmlFor="terms" className="text-sm leading-relaxed">
                           I agree to UGS's{' '}
-                          <Button variant="link" className="px-0 text-sm h-auto p-0 bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent">
+                          <button type="button" onClick={() => setTosOpen(true)} className="px-0 text-sm h-auto p-0 bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent underline">
                             Terms of Service
-                          </Button>{' '}
+                          </button>{' '}
                           and{' '}
-                          <Button variant="link" className="px-0 text-sm h-auto p-0 bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent">
+                          <button type="button" onClick={() => setPrivacyOpen(true)} className="px-0 text-sm h-auto p-0 bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent underline">
                             Privacy Policy
-                          </Button>
+                          </button>
                         </Label>
                       </div>
                       <div className="flex items-center space-x-3">
@@ -566,6 +619,36 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
           className="absolute bottom-32 left-16 w-12 h-12 bg-gradient-to-r from-purple-400 to-indigo-400 rounded-full opacity-20 blur-sm"
         />
       </motion.div>
+
+      {/* Terms of Service Dialog */}
+      <Dialog open={tosOpen} onOpenChange={setTosOpen}>
+        <DialogContent className="backdrop-blur-xl">
+          <DialogHeader>
+            <DialogTitle>UGS Terms of Service</DialogTitle>
+            <DialogDescription>Sample summary of our services and commitments.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 text-sm text-muted-foreground">
+            <p>United Global Services (UGS) provides visa advisory, document preparation, and application concierge services. We are not a government agency and do not guarantee visa approvals.</p>
+            <p>By using our services, you authorize UGS to securely handle your documents and submit applications on your behalf where applicable. Fees paid cover service time and platform use.</p>
+            <p>Processing times are estimated and subject to consulate schedules. You agree to provide accurate information and acknowledge that false information may result in rejection.</p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Privacy Policy Dialog */}
+      <Dialog open={privacyOpen} onOpenChange={setPrivacyOpen}>
+        <DialogContent className="backdrop-blur-xl">
+          <DialogHeader>
+            <DialogTitle>UGS Privacy Policy</DialogTitle>
+            <DialogDescription>How we collect, use, and protect your data.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 text-sm text-muted-foreground">
+            <p>We collect personal information such as your name, contact details, and travel documents solely to deliver visa and immigration services.</p>
+            <p>Your data is encrypted in transit and at rest. We do not sell your data. Limited sharing may occur with consular authorities and trusted partners as required to deliver services.</p>
+            <p>You may request deletion of your account or data at any time, subject to legal and regulatory retention requirements.</p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

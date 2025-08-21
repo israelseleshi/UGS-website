@@ -162,9 +162,9 @@ export function AllenAI({ onPageChange }: AllenAIProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-background to-indigo-50/30 dark:from-blue-950/10 dark:via-background dark:to-indigo-950/5">
-      <div className="container mx-auto px-4 py-8">
+      <div className="site-container site-max py-24 md:py-28">
         {/* Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl mb-4">
             <Bot className="w-8 h-8 text-white" />
           </div>
@@ -178,7 +178,7 @@ export function AllenAI({ onPageChange }: AllenAIProps) {
           <div className="grid lg:grid-cols-4 gap-6">
             {/* Quick Actions Sidebar */}
             <div className="lg:col-span-1 space-y-4">
-              <Card>
+              <Card className="rounded-2xl shadow-sm ring-1 ring-border/50">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg">Quick Actions</CardTitle>
                 </CardHeader>
@@ -197,7 +197,7 @@ export function AllenAI({ onPageChange }: AllenAIProps) {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="rounded-2xl shadow-sm ring-1 ring-border/50">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg">Allen's Capabilities</CardTitle>
                 </CardHeader>
@@ -226,7 +226,7 @@ export function AllenAI({ onPageChange }: AllenAIProps) {
 
             {/* Chat Interface */}
             <div className="lg:col-span-3">
-              <Card className="h-[700px] flex flex-col">
+              <Card className="h-[700px] flex flex-col rounded-2xl shadow-sm ring-1 ring-border/50">
                 <CardHeader className="border-b">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">

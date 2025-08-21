@@ -35,13 +35,50 @@ export async function getUploadSignature(params?: { folder?: string; public_id?:
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
-    credentials: 'include',
   });
   if (!res.ok) throw new Error(`Signature request failed: ${res.statusText}`);
   return (await res.json()) as SignResponse;
 }
 
 export async function uploadAvatar(file: File, options?: { folder?: string; public_id?: string; onProgress?: (p: number) => void }) {
+  // Prefer unsigned upload when a preset is provided (no Firebase Functions required)
+  if (DEFAULT_UPLOAD_PRESET) {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('upload_preset', DEFAULT_UPLOAD_PRESET);
+    form.append('folder', options?.folder || DEFAULT_UPLOAD_FOLDER);
+    if (options?.public_id) form.append('public_id', options.public_id);
+
+    const url = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/auto/upload`;
+
+    const xhr = new XMLHttpRequest();
+    const promise: Promise<{ secure_url: string; public_id: string }> = new Promise((resolve, reject) => {
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && options?.onProgress) {
+          options.onProgress(Math.round((e.loaded / e.total) * 100));
+        }
+      };
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const json = JSON.parse(xhr.responseText);
+            resolve({ secure_url: json.secure_url, public_id: json.public_id });
+          } catch (err) {
+            reject(err);
+          }
+        } else {
+          reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText}`));
+        }
+      };
+      xhr.onerror = () => reject(new Error('Network error during upload'));
+      xhr.open('POST', url);
+      xhr.send(form);
+    });
+
+    return promise;
+  }
+
+  // Fallback to signed upload (requires Firebase Functions backend)
   const { signature, timestamp, apiKey, folder, upload_preset, cloudName } = await getUploadSignature({ folder: options?.folder, public_id: options?.public_id });
 
   const form = new FormData();

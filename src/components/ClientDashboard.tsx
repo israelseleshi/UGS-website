@@ -79,6 +79,7 @@ import { getUser, listUserApplications, upsertUser, listApplicationMessages, sen
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './dialog';
 import { MobileSidebar, MobileMenuButton } from './MobileSidebar';
 import { useIsMobile } from './use-mobile';
+import AvatarUpload from './AvatarUpload';
 
 interface ClientDashboardProps {
   onPageChange: (page: string) => void;
@@ -96,6 +97,7 @@ export function ClientDashboard({
   const isMobile = useIsMobile();
   const { user } = useAuth();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const [messagesOpen, setMessagesOpen] = useState(false);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [messages, setMessages] = useState<(AppMessage & { id: string })[]>([]);
@@ -382,14 +384,18 @@ export function ClientDashboard({
         </div>
       </motion.div>
 
-      {/* Fixed left desktop sidebar to mirror mobile positioning */}
-      <div className="hidden lg:block fixed left-0 top-20 z-30 h-[calc(100vh-5rem)] py-2">
-        <div className={`${isSidebarCollapsed ? 'w-16' : 'w-64'} h-full px-2`}>
+      {/* Fixed left desktop sidebar; expands on hover when collapsed (Gemini-like) */}
+      <div
+        className="hidden lg:block fixed left-0 top-20 z-30 h-[calc(100vh-5rem)] py-2"
+        onMouseEnter={() => setIsSidebarHovered(true)}
+        onMouseLeave={() => setIsSidebarHovered(false)}
+      >
+        <div className={`${(isSidebarCollapsed && !isSidebarHovered) ? 'w-16' : 'w-64'} h-full px-2`}>
           <DesktopSidebar
             items={clientTabs as any}
             selected={selectedTab}
             onSelect={setSelectedTab}
-            collapsed={isSidebarCollapsed}
+            collapsed={isSidebarCollapsed && !isSidebarHovered}
             onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           />
         </div>
@@ -401,6 +407,7 @@ export function ClientDashboard({
           <div className="col-span-12 lg:hidden">
             <DesktopSidebar items={clientTabs as any} selected={selectedTab} onSelect={setSelectedTab} collapsed={isSidebarCollapsed} onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
           </div>
+          {/* Note: content padding depends only on base collapsed state to avoid shifting on hover */}
           <div className={`col-span-12 lg:col-span-12 ${isSidebarCollapsed ? 'lg:pl-16' : 'lg:pl-64'}`}>
             <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
               <TabsContent value="overview" className="space-y-8">
@@ -727,12 +734,7 @@ export function ClientDashboard({
                     <Card className="text-center bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl">
                       <CardContent className="p-6">
                         <motion.div whileHover={{ scale: 1.05 }} className="relative inline-block mb-6">
-                          <Avatar className="w-24 h-24 ring-4 ring-gradient-to-r from-red-500 to-pink-500">
-                            <AvatarFallback className="bg-gradient-to-r from-red-500 to-pink-500 text-white text-2xl font-bold">{clientData.name.split(" ").map((n) => n[0]).join("")}</AvatarFallback>
-                          </Avatar>
-                          <motion.div whileHover={{ scale: 1.1 }} className="absolute -bottom-2 -right-2 w-8 h-8 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center cursor-pointer shadow-lg">
-                            <Camera className="w-4 h-4 text-white" />
-                          </motion.div>
+                          <AvatarUpload mode="overlay" sizePx={96} />
                         </motion.div>
                         <h3 className="text-xl font-bold mb-2">{clientData.name}</h3>
                         <p className="text-gray-600 dark:text-gray-400 mb-1">{clientData.email}</p>
