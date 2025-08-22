@@ -16,11 +16,7 @@ import {
   Eye, 
   EyeOff,
   CheckCircle,
-  AlertCircle,
-  Shield,
-  Sparkles,
-  Crown,
-  Star
+  AlertCircle
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { upsertUser } from '../lib/db';
@@ -132,43 +128,12 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
     onPageChange('verify-email');
   };
 
-  const benefits = [
-    'Priority visa processing',
-    'Dedicated premium support',
-    'Document management system',
-    'Real-time application tracking',
-    'Expert consultation calls',
-    'Global concierge services'
-  ];
+  // Removed premium/luxury benefits section for a standard login/signup experience
 
   return (
     <div className="min-h-screen flex relative overflow-hidden">
-      {/* Animated Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-red-50/30 dark:from-slate-950 dark:via-gray-900 dark:to-red-950/20">
-        <div className="absolute inset-0">
-          {[...Array(6)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="absolute w-32 h-32 bg-gradient-to-r from-red-500/10 to-pink-500/10 rounded-full blur-xl"
-              animate={{
-                x: [0, 100, -100, 0],
-                y: [0, -100, 100, 0],
-                scale: [1, 1.2, 0.8, 1],
-              }}
-              transition={{
-                duration: 10 + i * 2,
-                repeat: Infinity,
-                ease: "easeInOut",
-                delay: i * 0.5,
-              }}
-              style={{
-                left: `${20 + i * 15}%`,
-                top: `${10 + i * 10}%`,
-              }}
-            />
-          ))}
-        </div>
-      </div>
+      {/* Static Background (animated blobs removed) */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-red-50/30 dark:from-slate-950 dark:via-gray-900 dark:to-red-950/20" />
 
       {/* Left side - Form */}
       <div className="flex-1 flex items-center justify-center px-6 sm:px-8 lg:px-12 py-8 relative z-10">
@@ -210,12 +175,12 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                 transition={{ delay: 0.3 }}
               >
                 <CardTitle className="text-4xl md:text-5xl tracking-tight bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                  {type === 'signin' ? 'Welcome back' : 'Join our premium community'}
+                  {type === 'signin' ? 'Welcome back' : 'Create your account'}
                 </CardTitle>
                 <CardDescription className="text-lg md:text-xl mt-3 text-muted-foreground">
                   {type === 'signin' 
-                    ? 'Sign in to access your luxury visa portal'
-                    : 'Experience world-class visa and immigration services'
+                    ? 'Sign in to access your portal'
+                    : 'Create your account to get started'
                   }
                 </CardDescription>
               </motion.div>
@@ -453,7 +418,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                           onCheckedChange={(checked) => handleInputChange('newsletterOptIn', checked as boolean)}
                         />
                         <Label htmlFor="newsletter" className="text-sm">
-                          Send me premium updates and exclusive offers
+                          Send me updates and offers
                         </Label>
                       </div>
                     </motion.div>
@@ -481,7 +446,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                       />
                     ) : (
                       <>
-                        {type === 'signin' ? 'Sign In to Portal' : 'Join Premium Community'}
+                        {type === 'signin' ? 'Sign In' : 'Create Account'}
                         <ArrowRight className="w-5 h-5 ml-2" />
                       </>
                     )}
@@ -503,7 +468,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                       className="px-0 text-sm h-auto p-0 bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent font-semibold"
                       onClick={() => onPageChange(type === 'signin' ? 'signup' : 'signin')}
                     >
-                      {type === 'signin' ? 'Join our premium community' : 'Sign in to your account'}
+                      {type === 'signin' ? 'Create an account' : 'Sign in to your account'}
                     </Button>
                   </motion.div>
                 </motion.div>
@@ -513,116 +478,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
         </motion.div>
       </div>
 
-      {/* Right side - Luxury Benefits */}
-      <motion.div 
-        initial={{ opacity: 0, x: 50 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.6, delay: 0.3 }}
-        className="hidden lg:flex flex-1 bg-gradient-to-br from-red-500/5 via-pink-50/80 to-orange-50/60 dark:from-red-950/10 dark:via-pink-950/20 dark:to-orange-950/10 items-center justify-center p-8 relative"
-      >
-        <div className="max-w-md space-y-8 relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="space-y-6"
-          >
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-gradient-to-r from-red-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-xl">
-                <Crown className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                  {type === 'signin' ? 'Welcome Back' : 'Join the Elite'}
-                </h2>
-                <p className="text-gray-600 dark:text-gray-400">Premium visa services await</p>
-              </div>
-            </div>
-            
-            <p className="text-lg text-gray-700 dark:text-gray-300 leading-relaxed">
-              {type === 'signin' 
-                ? 'Access your personalized luxury dashboard with premium features and white-glove service.'
-                : 'Experience world-class visa services with our exclusive premium community benefits.'
-              }
-            </p>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="space-y-4"
-          >
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
-              <Sparkles className="w-5 h-5 mr-2 text-yellow-500" />
-              Premium Benefits
-            </h3>
-            <div className="space-y-3">
-              {benefits.map((benefit, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.7 + index * 0.1 }}
-                  className="flex items-center space-x-3"
-                >
-                  <div className="w-6 h-6 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center flex-shrink-0">
-                    <CheckCircle className="w-4 h-4 text-white" />
-                  </div>
-                  <span className="text-gray-700 dark:text-gray-300">{benefit}</span>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.0 }}
-            className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl rounded-2xl p-6 border border-white/20 dark:border-gray-800/20 shadow-2xl"
-          >
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
-                <Shield className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h4 className="font-semibold text-gray-900 dark:text-white">Enterprise Security</h4>
-                <p className="text-xs text-gray-600 dark:text-gray-400">Bank-level encryption</p>
-              </div>
-            </div>
-            <p className="text-sm text-gray-700 dark:text-gray-300">
-              Your personal information is protected with military-grade encryption and never shared with third parties.
-            </p>
-          </motion.div>
-        </div>
-
-        {/* Floating Elements */}
-        <motion.div
-          animate={{ 
-            y: [0, -20, 0],
-            rotate: [0, 5, 0] 
-          }}
-          transition={{ 
-            duration: 6, 
-            repeat: Infinity, 
-            ease: "easeInOut" 
-          }}
-          className="absolute top-20 right-20 w-16 h-16 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-2xl opacity-20 blur-sm"
-        />
-        <motion.div
-          animate={{ 
-            y: [0, 20, 0],
-            rotate: [0, -5, 0] 
-          }}
-          transition={{ 
-            duration: 8, 
-            repeat: Infinity, 
-            ease: "easeInOut",
-            delay: 2 
-          }}
-          className="absolute bottom-32 left-16 w-12 h-12 bg-gradient-to-r from-purple-400 to-indigo-400 rounded-full opacity-20 blur-sm"
-        />
-      </motion.div>
+      {/* Right side removed to keep a single centered column layout */}
 
       {/* Terms of Service Dialog */}
       <Dialog open={tosOpen} onOpenChange={setTosOpen}>

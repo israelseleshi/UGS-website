@@ -10,6 +10,7 @@ import { ServiceRequest } from './components/ServiceRequest';
 import { AdminDashboard } from './components/AdminDashboard';
 import { ClientDashboard } from './components/ClientDashboard';
 import { VerifyEmail } from './components/VerifyEmail';
+import { CourseDetailsPage } from './components/CourseDetailsPage';
 import { Card, CardContent, CardHeader, CardTitle } from './components/card';
 import { Button } from './components/button';
 import { ImageWithFallback } from './components/ImageWithFallback';
@@ -27,6 +28,33 @@ import {
 import { useAuth } from './lib/auth';
 import { Toaster } from 'sonner';
 import { ensureBaseCollections } from './lib/db';
+
+// Basic error boundary to surface runtime errors instead of a blank screen
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { error: any }> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error: any) {
+    return { error };
+  }
+  componentDidCatch(error: any, info: any) {
+    try { console.error('App crashed:', error, info); } catch {}
+  }
+  render() {
+    if (this.state.error) {
+      const msg = String(this.state.error?.message || this.state.error);
+      return (
+        <div className="min-h-screen bg-background text-foreground p-6">
+          <h1 className="text-xl font-bold mb-2">Something went wrong</h1>
+          <p className="text-sm text-muted-foreground mb-3">Please check the console for details.</p>
+          <pre className="text-xs whitespace-pre-wrap bg-muted/30 border border-border rounded p-3 text-red-600">{msg}</pre>
+        </div>
+      );
+    }
+    return this.props.children as any;
+  }
+}
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -376,109 +404,125 @@ export default function App() {
             </motion.div>
           </div>
         </section>
+        </motion.div>
+      );
+    };
+
+  // About page content (stub)
+  function AboutPage() {
+    return (
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="min-h-screen">
+        {/* Hero Section */}
+        <section className="py-24 md:py-28 bg-gradient-to-br from-blue-50 via-background to-indigo-50/30 dark:from-blue-950/20 dark:via-background dark:to-indigo-950/10">
+          <div className="site-container site-max text-center">
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-4xl md:text-5xl font-bold mb-6"
+            >
+              About United Global Services
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="text-xl text-muted-foreground max-w-3xl mx-auto"
+            >
+              Inspiring borderless thinking through expert visa and immigration services since 2008
+            </motion.p>
+          </div>
+        </section>
+
+        {/* Content */}
+        <section className="pt-16 pb-28 md:pt-20 md:pb-32">
+          <div className="site-container site-max">
+            <div className="max-w-4xl mx-auto space-y-12">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="text-center"
+              >
+                <h2 className="text-3xl font-bold mb-6">Our Story</h2>
+                <p className="text-lg text-muted-foreground leading-relaxed">
+                  Founded in 2008, United Global Services has been at the forefront of simplifying global mobility.
+                  Our mission is to break down barriers and create opportunities for individuals and businesses to
+                  thrive in an interconnected world. With over 15 years of experience, we've helped thousands of
+                  clients achieve their dreams of traveling, studying, working, and living abroad.
+                </p>
+              </motion.div>
+
+              <div className="grid md:grid-cols-3 gap-8">
+                {[
+                  { icon: Users, title: 'Expert Team', description: 'Immigration lawyers, visa specialists, and consultants with decades of combined experience' },
+                  { icon: Globe, title: 'Global Reach', description: 'Comprehensive services for over 120 countries with local expertise and partnerships' },
+                  { icon: Award, title: 'Proven Results', description: '98% success rate with over 50,000 successful visa applications and immigration cases' }
+                ].map((item, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 + index * 0.1 }}
+                    whileHover={{ scale: 1.05 }}
+                  >
+                    <Card className="text-center h-full rounded-2xl shadow-sm ring-1 ring-border/50">
+                      <CardContent className="p-6">
+                        <div className="w-12 h-12 bg-primary/10 rounded-xl mx-auto mb-4 flex items-center justify-center">
+                          <item.icon className="w-6 h-6 text-primary" />
+                        </div>
+                        <h3 className="font-semibold text-lg mb-2">{item.title}</h3>
+                        <p className="text-sm text-muted-foreground">{item.description}</p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+                className="text-center"
+              >
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button 
+                    size="lg" 
+                    onClick={() => setCurrentPage('request')}
+                    className="px-8"
+                  >
+                    Work With Us
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  </Button>
+                </motion.div>
+              </motion.div>
+            </div>
+          </div>
+        </section>
       </motion.div>
     );
-  };
+  }
 
-  // About page content
-  const AboutPage = () => (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="min-h-screen"
-    >
-      {/* Hero Section */}
-      <section className="py-24 md:py-28 bg-gradient-to-br from-blue-50 via-background to-indigo-50/30 dark:from-blue-950/20 dark:via-background dark:to-indigo-950/10">
-        <div className="site-container site-max text-center">
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-4xl md:text-5xl font-bold mb-6"
-          >
-            About United Global Services
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-xl text-muted-foreground max-w-3xl mx-auto"
-          >
-            Inspiring borderless thinking through expert visa and immigration services since 2008
-          </motion.p>
-        </div>
-      </section>
-
-      {/* Content */}
-      <section className="pt-16 pb-28 md:pt-20 md:pb-32">
-        <div className="site-container site-max">
-          <div className="max-w-4xl mx-auto space-y-12">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="text-center"
-            >
-              <h2 className="text-3xl font-bold mb-6">Our Story</h2>
-              <p className="text-lg text-muted-foreground leading-relaxed">
-                Founded in 2008, United Global Services has been at the forefront of simplifying global mobility. 
-                Our mission is to break down barriers and create opportunities for individuals and businesses to 
-                thrive in an interconnected world. With over 15 years of experience, we've helped thousands of 
-                clients achieve their dreams of traveling, studying, working, and living abroad.
-              </p>
-            </motion.div>
-
-            <div className="grid md:grid-cols-3 gap-8">
-              {[
-                { icon: Users, title: 'Expert Team', description: 'Immigration lawyers, visa specialists, and consultants with decades of combined experience' },
-                { icon: Globe, title: 'Global Reach', description: 'Comprehensive services for over 120 countries with local expertise and partnerships' },
-                { icon: Award, title: 'Proven Results', description: '98% success rate with over 50,000 successful visa applications and immigration cases' }
-              ].map((item, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 + index * 0.1 }}
-                  whileHover={{ scale: 1.05 }}
-                >
-                  <Card className="text-center h-full rounded-2xl shadow-sm ring-1 ring-border/50">
-                    <CardContent className="p-6">
-                      <div className="w-12 h-12 bg-primary/10 rounded-xl mx-auto mb-4 flex items-center justify-center">
-                        <item.icon className="w-6 h-6 text-primary" />
-                      </div>
-                      <h3 className="font-semibold text-lg mb-2">{item.title}</h3>
-                      <p className="text-sm text-muted-foreground">{item.description}</p>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-            </div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
-              className="text-center"
-            >
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button 
-                  size="lg" 
-                  onClick={() => setCurrentPage('request')}
-                  className="px-8"
-                >
-                  Work With Us
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </Button>
-              </motion.div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-    </motion.div>
-  );
+  
 
   // Render current page with animations
   const renderPage = () => {
+    // Dynamic course details routing: pages like 'course:tourist-visa-fundamentals'
+    if (currentPage.startsWith('course:')) {
+      const courseId = currentPage.substring('course:'.length);
+      return (
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentPage}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+          >
+            <CourseDetailsPage courseId={courseId} onPageChange={setCurrentPage} />
+          </motion.div>
+        </AnimatePresence>
+      );
+    }
     const pageComponents = {
       'home': <HomePage onPageChange={setCurrentPage} />,
       'services': <ServicesPage />,
@@ -513,105 +557,106 @@ export default function App() {
   const isDashboardPage = !shouldShowHeader;
 
   return (
-  <div className="min-h-screen bg-background text-foreground app-shell">
-      {shouldShowHeader && (
-        <Header 
-          currentPage={currentPage}
-          onPageChange={setCurrentPage}
-          theme={theme}
-          onThemeChange={toggleTheme}
-        />
-      )}
-      <main className="relative">
-        <div className={isDashboardPage ? "px-6 sm:px-8 lg:px-12 xl:px-16 2xl:px-24" : "px-0"}>
-        {renderPage()}
-        </div>
-      </main>
-      <Toaster richColors position="top-center" />
-      
-      {/* Footer - only show for non-dashboard pages */}
-      {shouldShowHeader && (
-        <motion.footer
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="bg-muted/30 border-t border-border"
-        >
-          <div className="container mx-auto py-12">
-            <div className="grid md:grid-cols-4 gap-8">
-              <div className="space-y-4">
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  className="flex items-center space-x-3"
-                >
-                  <div className="w-8 h-8 bg-gradient-to-br from-primary to-red-600 rounded-lg flex items-center justify-center">
-                    <Globe className="w-5 h-5 text-white" />
+  <ErrorBoundary>
+    <div className="min-h-screen bg-background text-foreground app-shell">
+        {shouldShowHeader && (
+          <Header 
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            theme={theme}
+            onThemeChange={toggleTheme}
+          />
+        )}
+        <main className="relative">
+          <div className={isDashboardPage ? "px-6 sm:px-8 lg:px-12 xl:px-16 2xl:px-24" : "px-0"}>
+          {renderPage()}
+          </div>
+        </main>
+        <Toaster richColors position="top-center" />
+        
+        {/* Footer - only show for non-dashboard pages */}
+        {shouldShowHeader && (
+          <motion.footer
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="bg-muted/30 border-t border-border"
+          >
+            <div className="container mx-auto py-12">
+              <div className="grid md:grid-cols-4 gap-8">
+                <div className="space-y-4">
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    className="flex items-center space-x-3"
+                  >
+                    <div className="w-8 h-8 bg-gradient-to-br from-primary to-red-600 rounded-lg flex items-center justify-center">
+                      <Globe className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold">UGS</h3>
+                      <p className="text-xs text-muted-foreground">inspiring borderless thinking</p>
+                    </div>
+                  </motion.div>
+                  <p className="text-sm text-muted-foreground">
+                    Your trusted partner for visa and immigration services worldwide.
+                  </p>
+                </div>
+                
+                {[
+                  {
+                    title: 'Services',
+                    links: [
+                      { name: 'Tourism & Leisure', action: () => setCurrentPage('services') },
+                      { name: 'Immigration & Relocation', action: () => setCurrentPage('services') },
+                      { name: 'Trade License Formation', action: () => setCurrentPage('services') },
+                      { name: 'International Education', action: () => setCurrentPage('services') }
+                    ]
+                  },
+                  {
+                    title: 'Resources',
+                    links: [
+                      { name: 'VisaEd', action: () => setCurrentPage('visaed') },
+                      { name: 'Allen AI', action: () => setCurrentPage('allen') },
+                      { name: 'Blog', action: () => {} }
+                    ]
+                  },
+                  {
+                    title: 'Company',
+                    links: [
+                      { name: 'About Us', action: () => setCurrentPage('about') },
+                      { name: 'Contact', action: () => {} },
+                      { name: 'Careers', action: () => {} },
+                      { name: 'Privacy Policy', action: () => {} }
+                    ]
+                  }
+                ].map((section, index) => (
+                  <div key={index}>
+                    <h4 className="font-semibold mb-4">{section.title}</h4>
+                    <div className="space-y-2 text-sm">
+                      {section.links.map((link, linkIndex) => (
+                        <motion.button
+                          key={linkIndex}
+                          whileHover={{ x: 5 }}
+                          onClick={link.action}
+                          className="block text-muted-foreground hover:text-foreground transition-colors text-left"
+                        >
+                          {link.name}
+                        </motion.button>
+                      ))}
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-bold">UGS</h3>
-                    <p className="text-xs text-muted-foreground">inspiring borderless thinking</p>
-                  </div>
-                </motion.div>
+                ))}
+              </div>
+
+              <div className="border-t border-border pt-8 mt-8 text-center">
                 <p className="text-sm text-muted-foreground">
-                  Your trusted partner for visa and immigration services worldwide.
+                  © 2024 United Global Services. All rights reserved. | Inspiring borderless thinking.
                 </p>
               </div>
-              
-              {[
-                {
-                  title: 'Services',
-                  links: [
-                    { name: 'Tourism & Leisure', action: () => setCurrentPage('services') },
-                    { name: 'Immigration & Relocation', action: () => setCurrentPage('services') },
-                    { name: 'Trade License Formation', action: () => setCurrentPage('services') },
-                    { name: 'International Education', action: () => setCurrentPage('services') }
-                  ]
-                },
-                {
-                  title: 'Resources',
-                  links: [
-                    { name: 'VisaEd', action: () => setCurrentPage('visaed') },
-                    { name: 'Allen AI', action: () => setCurrentPage('allen') },
-                    { name: 'FAQ', action: () => {} },
-                    { name: 'Blog', action: () => {} }
-                  ]
-                },
-                {
-                  title: 'Company',
-                  links: [
-                    { name: 'About Us', action: () => setCurrentPage('about') },
-                    { name: 'Contact', action: () => {} },
-                    { name: 'Careers', action: () => {} },
-                    { name: 'Privacy Policy', action: () => {} }
-                  ]
-                }
-              ].map((section, index) => (
-                <div key={index}>
-                  <h4 className="font-semibold mb-4">{section.title}</h4>
-                  <div className="space-y-2 text-sm">
-                    {section.links.map((link, linkIndex) => (
-                      <motion.button
-                        key={linkIndex}
-                        whileHover={{ x: 5 }}
-                        onClick={link.action}
-                        className="block text-muted-foreground hover:text-foreground transition-colors text-left"
-                      >
-                        {link.name}
-                      </motion.button>
-                    ))}
-                  </div>
-                </div>
-              ))}
             </div>
-
-            <div className="border-t border-border pt-8 mt-8 text-center">
-              <p className="text-sm text-muted-foreground">
-                © 2024 United Global Services. All rights reserved. | Inspiring borderless thinking.
-              </p>
-            </div>
-          </div>
-        </motion.footer>
-      )}
-    </div>
+          </motion.footer>
+        )}
+      </div>
+    </ErrorBoundary>
   );
 }

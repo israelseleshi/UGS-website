@@ -114,6 +114,9 @@ export function VisaEdPage({ onPageChange }: VisaEdPageProps) {
     }
   ];
 
+  // Helper to build a course slug from the title
+  const toSlug = (title: string) => title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
   const courses = [
     {
       title: 'Tourist Visa Fundamentals',
@@ -283,7 +286,7 @@ export function VisaEdPage({ onPageChange }: VisaEdPageProps) {
                         </div>
                       ))}
                     </div>
-                    <Button className="w-full" variant="outline">
+                    <Button className="w-full" variant="outline" onClick={() => onPageChange(`course:${toSlug(course.title)}`)}>
                       Learn More
                     </Button>
                   </div>

@@ -80,6 +80,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { MobileSidebar, MobileMenuButton } from './MobileSidebar';
 import { useIsMobile } from './use-mobile';
 import AvatarUpload from './AvatarUpload';
+import ChatPanel, { type ChatMessage as UiChatMessage } from './ChatPanel';
 
 interface ClientDashboardProps {
   onPageChange: (page: string) => void;
@@ -104,6 +105,12 @@ export function ClientDashboard({
   const [newMessage, setNewMessage] = useState('');
   const [selectedMsgAppId, setSelectedMsgAppId] = useState<string | null>(null);
   const messagesUnsub = React.useRef<undefined | (() => void)>(undefined);
+  // Support tab chat (wired to Firestore)
+  const [supportAppId, setSupportAppId] = useState<string | null>(null);
+  const [supportMessages, setSupportMessages] = useState<(AppMessage & { id: string })[]>([]);
+  const [supportInput, setSupportInput] = useState('');
+  const [supportLoading, setSupportLoading] = useState(false);
+  const supportUnsub = React.useRef<undefined | (() => void)>(undefined);
 
   React.useEffect(() => {
     const onChange = (e: Event) => {
@@ -184,7 +191,13 @@ export function ClientDashboard({
             priority: "Standard",
             officer: "",
           }));
-          if (!ignore) setApplications(mapped);
+          if (!ignore) {
+            setApplications(mapped);
+            // Default Support tab to most recent application if available
+            if (!supportAppId && items && items.length > 0) {
+              setSupportAppId(items[0].id);
+            }
+          }
         } catch {
           if (!ignore) setApplications([]);
         }
@@ -195,6 +208,26 @@ export function ClientDashboard({
       ignore = true;
     };
   }, [user]);
+
+  // Manage Support tab subscription lifecycle
+  React.useEffect(() => {
+    // Only subscribe when on Support tab and we have an appId
+    if (selectedTab !== 'support' || !supportAppId) {
+      supportUnsub.current?.();
+      supportUnsub.current = undefined;
+      return;
+    }
+    setSupportLoading(true);
+    supportUnsub.current?.();
+    supportUnsub.current = subscribeApplicationMessages(supportAppId, (items) => {
+      setSupportMessages(items as any);
+    });
+    setSupportLoading(false);
+    return () => {
+      supportUnsub.current?.();
+      supportUnsub.current = undefined;
+    };
+  }, [selectedTab, supportAppId]);
 
   async function openMessages(appId: string) {
     try {
@@ -215,9 +248,16 @@ export function ClientDashboard({
   async function sendMsg() {
     if (!selectedMsgAppId || !user || !newMessage.trim()) return;
     try {
-      const sent = await sendApplicationMessage(selectedMsgAppId, { text: newMessage.trim(), byUid: user.uid, byRole: 'user' });
-      setMessages(prev => [...prev, { id: (sent as any).id, ...(sent as any) }]);
+      await sendApplicationMessage(selectedMsgAppId, { text: newMessage.trim(), byUid: user.uid, byRole: 'user' });
       setNewMessage('');
+    } catch {}
+  }
+
+  async function sendSupportMsg() {
+    if (!supportAppId || !user || !supportInput.trim()) return;
+    try {
+      await sendApplicationMessage(supportAppId, { text: supportInput.trim(), byUid: user.uid, byRole: 'user' });
+      setSupportInput('');
     } catch {}
   }
 
@@ -687,6 +727,34 @@ export function ClientDashboard({
                   <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent mb-2">Premium Support Center</h2>
                   <p className="text-gray-600 dark:text-gray-400">Get expert help from our dedicated support team</p>
                 </motion.div>
+
+                {/* Choose which application to chat about */}
+                {applications.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-gray-600 dark:text-gray-400">Application</label>
+                    <select
+                      value={supportAppId ?? ''}
+                      onChange={(e) => setSupportAppId(e.target.value || null)}
+                      className="text-sm px-2 py-1 rounded-md border bg-transparent"
+                    >
+                      {applications.map((app: any) => (
+                        <option key={app.id} value={app.id}>{app.type} • {app.country} • {app.id}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <ChatPanel
+                  title="Support Chat"
+                  description={supportAppId ? `Chat about application ${supportAppId}` : 'Select an application to start chatting'}
+                  messages={supportMessages.map((m) => ({ id: m.id, text: m.text, by: (m.byRole === 'admin' ? 'admin' : 'user') as 'admin' | 'user', at: '' }))}
+                  pending={supportLoading}
+                  input={supportInput}
+                  setInput={setSupportInput}
+                  onSend={sendSupportMsg}
+                  placeholder={supportAppId ? "Type your message to support..." : "Select an application first"}
+                  emptyState={supportAppId ? "No messages yet. Start a conversation with support." : "Choose an application to start chatting."}
+                />
 
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {[{ title: "Live Chat Support", description: "24/7 instant assistance", icon: MessageSquare, gradient: "from-green-500 to-emerald-500", action: "Start Chat" }, { title: "Video Consultation", description: "Face-to-face expert guidance", icon: Camera, gradient: "from-blue-500 to-cyan-500", action: "Book Call" }, { title: "Priority Phone Line", description: "Direct access to specialists", icon: Phone, gradient: "from-purple-500 to-indigo-500", action: "Call Now" }].map((support, index) => (

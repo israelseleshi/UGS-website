@@ -6,12 +6,13 @@ import { Button } from './button';
 import { Badge } from './badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs';
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
-import { listAllApplications, getVisaApplication, updateVisaApplication, sendApplicationMessage, subscribeApplicationMessages, listVisaEdRegistrations, type VisaApplication, type AppMessage, type VisaEdRegistration } from '../lib/db';
+import { listAllApplications, getVisaApplication, updateVisaApplication, sendApplicationMessage, subscribeApplicationMessages, listVisaEdRegistrations, ensureBaseCollections, type VisaApplication, type AppMessage, type VisaEdRegistration } from '../lib/db';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from './avatar';
 import { Progress } from './progress';
 import { MobileSidebar, MobileMenuButton } from './MobileSidebar';
 import { useIsMobile } from './use-mobile';
+import ChatPanel, { type ChatMessage as UiChatMessage } from './ChatPanel';
 import {
   BarChart,
   Bar,
@@ -58,11 +59,17 @@ import {
   Check,
   XCircle,
   LogOut,
-  Send
+  Send,
+  User,
+  Phone,
+  MapPin,
+  Flag,
+  ShieldCheck
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './dialog';
 import { DesktopSidebar } from './DesktopSidebar';
 import { useAuth } from '../lib/auth';
+import { isFirebaseConfigured } from '../lib/firebase';
 
 interface AdminDashboardProps {
   onPageChange: (page: string) => void;
@@ -78,6 +85,31 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
   const isMobile = useIsMobile();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false); // State for sidebar collapse
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
+  // Local UI-only chat state for Messages tab (per-user threads)
+  const [selectedChatUserId, setSelectedChatUserId] = useState<string | null>(null);
+  const [chatByUser, setChatByUser] = useState<Record<string, UiChatMessage[]>>({});
+  const [chatInputByUser, setChatInputByUser] = useState<Record<string, string>>({});
+  const [chatPendingByUser, setChatPendingByUser] = useState<Record<string, boolean>>({});
+  const chatMessagesUnsub = React.useRef<undefined | (() => void)>(undefined);
+  // Derive unique chat users from applications
+  const chatUsers = React.useMemo(() => {
+    const userMap = new Map<string, { id: string; name: string; email: string; count: number }>();
+    for (const app of applications) {
+      const id = (app.uid || app.userEmail || app.id) as string;
+      const name = `${app.personalInfo?.firstName || ''} ${app.personalInfo?.lastName || ''}`.trim() || 'Unknown';
+      const email = (app.userEmail || app.personalInfo?.email || 'N/A') as string;
+      const prev = userMap.get(id);
+      if (prev) userMap.set(id, { ...prev, count: prev.count + 1 });
+      else userMap.set(id, { id, name, email, count: 1 });
+    }
+    return Array.from(userMap.values());
+  }, [applications]);
+  // Default selected chat user once users list is available
+  React.useEffect(() => {
+    if (!selectedChatUserId && chatUsers.length > 0) {
+      setSelectedChatUserId(chatUsers[0].id);
+    }
+  }, [selectedChatUserId, chatUsers]);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [detailsLoading, setDetailsLoading] = useState(false);
   // Keep unsubscribe handle for messages
@@ -109,11 +141,20 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
     return () => window.removeEventListener('themechange', onChange as EventListener);
   }, []);
 
+  // Seed base collections when admin logs in (safe no-op if already exist)
+  React.useEffect(() => {
+    ensureBaseCollections().catch(() => {});
+  }, []);
+
   // Load VisaEd registrations
   React.useEffect(() => {
     let ignore = false;
     async function loadRegs() {
       try {
+        if (!isFirebaseConfigured) {
+          if (!ignore) setVisaEdLoading(false);
+          return;
+        }
         setVisaEdLoading(true);
         const { items } = await listVisaEdRegistrations(100);
         if (!ignore) setVisaEdRegs(items as any);
@@ -193,6 +234,10 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
     let ignore = false;
     async function loadApplications() {
       try {
+        if (!isFirebaseConfigured) {
+          if (!ignore) setLoading(false);
+          return;
+        }
         setLoading(true);
         const { items } = await listAllApplications(50);
         if (!ignore) {
@@ -219,6 +264,44 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
   const totalRevenue = applications.reduce((sum, app) => sum + (app.estimatedCost || 0), 0);
   const successRate = totalApplications > 0 ? ((approvedApplications / totalApplications) * 100).toFixed(1) : '0';
   const uniqueUsers = new Set(applications.map(app => app.uid)).size;
+
+  // Helper: get primary application ID for a chat user identifier
+  const getAppIdForUser = React.useCallback((id: string | null) => {
+    if (!id) return null;
+    const matches = applications.filter(a => a.uid === id || a.userEmail === id || a.id === id);
+    if (matches.length === 0) return null;
+    // Pick the most recent by createdAt
+    const sorted = matches.slice().sort((a, b) => {
+      const ta = (a.createdAt && (a.createdAt.toDate?.() as any)) ? a.createdAt.toDate().getTime() : 0;
+      const tb = (b.createdAt && (b.createdAt.toDate?.() as any)) ? b.createdAt.toDate().getTime() : 0;
+      return tb - ta;
+    });
+    return sorted[0].id;
+  }, [applications]);
+
+  // Subscribe to messages for the active chat user
+  React.useEffect(() => {
+    chatMessagesUnsub.current?.();
+    chatMessagesUnsub.current = undefined;
+    const activeId = selectedChatUserId || chatUsers[0]?.id || null;
+    const appId = getAppIdForUser(activeId);
+    if (!appId) {
+      setChatByUser(prev => ({ ...prev, [activeId as string]: [] }));
+      return;
+    }
+    try {
+      chatMessagesUnsub.current = subscribeApplicationMessages(appId, (items) => {
+        const mapped: UiChatMessage[] = items.map(it => ({ id: it.id, text: it.text, by: it.byRole === 'admin' ? 'admin' : 'user', at: undefined }));
+        setChatByUser(prev => ({ ...prev, [activeId as string]: mapped }));
+      });
+    } catch {
+      // ignore
+    }
+    return () => {
+      chatMessagesUnsub.current?.();
+      chatMessagesUnsub.current = undefined;
+    };
+  }, [selectedChatUserId, chatUsers, getAppIdForUser]);
 
   const overviewStats = [
     { title: 'Total Applications', value: totalApplications.toString(), change: '+12%', icon: FileText, color: 'text-blue-600' },
@@ -333,6 +416,23 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
 
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
 
+  // Convert ISO region codes to full country names (falls back gracefully)
+  const toCountryName = (code?: string) => {
+    if (!code) return '—';
+    const v = code.trim();
+    try {
+      // Prefer English names for consistency in admin
+      const Display = (Intl as any)?.DisplayNames;
+      if (Display) {
+        const dn = new Display(['en'], { type: 'region' });
+        return dn.of(v.toUpperCase()) || v;
+      }
+      return v;
+    } catch {
+      return v;
+    }
+  };
+
   // Derived list for VisaEd filtered regs
   const filteredVisaEdRegs = visaEdRegs
     .filter(r => {
@@ -354,6 +454,7 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
     { value: 'users', label: 'Users', icon: Users, description: 'User management and profiles' },
     { value: 'visaed', label: 'VisaEd', icon: GraduationCap, description: 'Educational content management' },
     { value: 'allen', label: 'Allen AI', icon: Bot, description: 'AI assistant analytics' },
+    { value: 'messages', label: 'Messages', icon: MessageSquare, description: 'Chat with clients (UI only)' },
     { value: 'analytics', label: 'Analytics', icon: BarChart3, description: 'Advanced analytics and reports' }
   ];
 
@@ -587,50 +688,152 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
 
       {/* VisaEd: View Registration Dialog */}
       <Dialog open={regViewOpen} onOpenChange={setRegViewOpen}>
-        <DialogContent className="w-[100vw] max-w-[100vw] sm:max-w-lg rounded-none sm:rounded-2xl p-0 overflow-hidden">
+        <DialogContent className="w-[100vw] max-w-[100vw] sm:max-w-2xl rounded-none sm:rounded-2xl p-0 overflow-hidden">
           <DialogHeader className="relative bg-gradient-to-r from-red-500 to-pink-500 text-white p-5">
-            <DialogTitle className="text-white">Enrollment Details</DialogTitle>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <GraduationCap className="w-5 h-5" /> Enrollment Details
+            </DialogTitle>
             <DialogDescription className="text-white/80">VisaEd registration overview</DialogDescription>
           </DialogHeader>
-          <div className="p-5 space-y-4 text-sm">
+          <div className="p-5 space-y-6 text-sm">
             {!selectedReg ? (
               <div className="text-muted-foreground">No registration selected.</div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-muted-foreground">Course</p>
-                  <p className="font-medium break-words">{selectedReg.courseName || '—'}</p>
+              <>
+                {/* Summary chips (email moved below into Personal Info) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <div className="flex items-center gap-3 rounded-lg border bg-card p-3">
+                    <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center">
+                      <GraduationCap className="w-4 h-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-muted-foreground">Course</p>
+                      <p className="font-semibold leading-tight break-words">{selectedReg.courseName || '—'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 rounded-lg border bg-card p-3">
+                    <div className="w-8 h-8 rounded-md bg-amber-500/10 flex items-center justify-center">
+                      <Star className="w-4 h-4 text-amber-500" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-muted-foreground">Plan</p>
+                      <p className="font-semibold uppercase leading-tight">{selectedReg.plan || 'free'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 rounded-lg border bg-card p-3">
+                    <div className="w-8 h-8 rounded-md bg-emerald-500/10 flex items-center justify-center">
+                      <CheckCircle className="w-4 h-4 text-emerald-500" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-muted-foreground">Status</p>
+                      <p className="font-semibold leading-tight capitalize">{selectedReg.status || 'registered'}</p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Plan</p>
-                  <p className="font-medium uppercase">{selectedReg.plan || 'free'}</p>
+
+                {/* Personal info with icons */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                    <User className="w-4 h-4" /> Personal Information
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center"><User className="w-4 h-4 text-primary" /></div>
+                      <div>
+                        <p className="text-[11px] text-muted-foreground">First Name</p>
+                        <p className="font-medium">{selectedReg.form?.firstName || '—'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center"><User className="w-4 h-4 text-primary" /></div>
+                      <div>
+                        <p className="text-[11px] text-muted-foreground">Last Name</p>
+                        <p className="font-medium">{selectedReg.form?.lastName || '—'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-md bg-emerald-500/10 flex items-center justify-center"><Phone className="w-4 h-4 text-emerald-500" /></div>
+                      <div>
+                        <p className="text-[11px] text-muted-foreground">Phone</p>
+                        <p className="font-medium break-words">{selectedReg.form?.phone || '—'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-md bg-purple-500/10 flex items-center justify-center"><MapPin className="w-4 h-4 text-purple-500" /></div>
+                      <div>
+                        <p className="text-[11px] text-muted-foreground">Current Location</p>
+                        <p className="font-medium">{toCountryName(selectedReg.form?.currentLocation)}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-md bg-sky-500/10 flex items-center justify-center"><Flag className="w-4 h-4 text-sky-500" /></div>
+                      <div>
+                        <p className="text-[11px] text-muted-foreground">Target Destination</p>
+                        <p className="font-medium">{toCountryName(selectedReg.form?.targetCountry)}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-md bg-blue-500/10 flex items-center justify-center"><Mail className="w-4 h-4 text-blue-500" /></div>
+                      <div>
+                        <p className="text-[11px] text-muted-foreground">Email</p>
+                        <p className="font-medium break-words">{selectedReg.form?.email || selectedReg.userEmail || '—'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-md bg-rose-500/10 flex items-center justify-center"><Plane className="w-4 h-4 text-rose-500" /></div>
+                      <div>
+                        <p className="text-[11px] text-muted-foreground">Visa Type</p>
+                        <p className="font-medium capitalize">{selectedReg.form?.visaType || '—'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-md bg-indigo-500/10 flex items-center justify-center"><Star className="w-4 h-4 text-indigo-500" /></div>
+                      <div>
+                        <p className="text-[11px] text-muted-foreground">Experience Level</p>
+                        <p className="font-medium capitalize">{selectedReg.form?.experienceLevel || '—'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-md bg-teal-500/10 flex items-center justify-center"><Calendar className="w-4 h-4 text-teal-500" /></div>
+                      <div>
+                        <p className="text-[11px] text-muted-foreground">Preferred Schedule</p>
+                        <p className="font-medium capitalize">{selectedReg.form?.preferredSchedule || '—'}</p>
+                      </div>
+                    </div>
+                    <div className="sm:col-span-2 flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-md bg-amber-500/10 flex items-center justify-center"><FileText className="w-4 h-4 text-amber-500" /></div>
+                      <div className="flex-1">
+                        <p className="text-[11px] text-muted-foreground">Learning Goals</p>
+                        <p className="font-medium break-words whitespace-pre-wrap">{selectedReg.form?.learningGoals || '—'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-md bg-green-500/10 flex items-center justify-center"><ShieldCheck className="w-4 h-4 text-green-500" /></div>
+                      <div>
+                        <p className="text-[11px] text-muted-foreground">Agreed to Terms</p>
+                        <p className="font-medium">{selectedReg.form?.agreeToTerms ? 'Yes' : 'No'}</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Status</p>
-                  <p className="font-medium">{selectedReg.status || 'registered'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">User Email</p>
-                  <p className="font-medium break-words">{selectedReg.userEmail || '—'}</p>
-                </div>
-                <div className="sm:col-span-2">
-                  <p className="text-xs text-muted-foreground">Registration ID</p>
-                  <p className="font-mono text-xs opacity-80 break-words">{selectedReg.id}</p>
-                </div>
+
+                {/* Optional payment reference */}
                 {selectedReg.paymentRef && (
-                  <div className="sm:col-span-2">
-                    <p className="text-xs text-muted-foreground">Payment Ref</p>
-                    <p className="font-medium break-words">{selectedReg.paymentRef}</p>
+                  <div className="flex items-center gap-3 rounded-lg border bg-card p-3">
+                    <div className="w-8 h-8 rounded-md bg-fuchsia-500/10 flex items-center justify-center">
+                      <Clipboard className="w-4 h-4 text-fuchsia-500" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-muted-foreground">Payment Ref</p>
+                      <p className="font-semibold break-words">{selectedReg.paymentRef}</p>
+                    </div>
                   </div>
                 )}
-              </div>
+              </>
             )}
           </div>
           <DialogFooter className="p-5 pt-0">
-            <div className="flex w-full justify-between gap-2">
-              <Button variant="outline" onClick={() => { if (selectedReg?.id) navigator.clipboard.writeText(selectedReg.id); }}>
-                <Clipboard className="w-4 h-4 mr-2" /> Copy ID
-              </Button>
+            <div className="flex w-full justify-end gap-2">
               <Button onClick={() => setRegViewOpen(false)} className="bg-gradient-to-r from-red-500 to-pink-500 text-white">Close</Button>
             </div>
           </DialogFooter>
@@ -711,6 +914,82 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
           {/* Note: content margin depends only on base collapsed state to avoid shifting on hover */}
           <div className={`col-span-12 lg:col-span-12 ${isSidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
             <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
+          {/* Messages Tab (UI-only with user list) */}
+          <TabsContent value="messages" className="space-y-6">
+            {(() => {
+              const users = chatUsers;
+              const activeId = selectedChatUserId || users[0]?.id || null;
+
+              const activeMessages = (activeId && chatByUser[activeId]) || [];
+              const activeInput = (activeId && chatInputByUser[activeId]) || '';
+              const activePending = !!(activeId && chatPendingByUser[activeId]);
+
+              const setActiveInput = (v: string) => setChatInputByUser(prev => ({ ...prev, [activeId as string]: v }));
+              const pushMessage = (msg: UiChatMessage) => setChatByUser(prev => ({ ...prev, [activeId as string]: [ ...(prev[activeId as string] || []), msg ] }));
+              const setPending = (b: boolean) => setChatPendingByUser(prev => ({ ...prev, [activeId as string]: b }));
+
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                  {/* User list */}
+                  <div className="md:col-span-5 lg:col-span-4">
+                    <Card className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl h-full">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-base">Conversations</CardTitle>
+                        <CardDescription>Select a user to chat</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-2 max-h-[28rem] overflow-auto pr-2 flex flex-col items-center">
+                        {users.length === 0 ? (
+                          <div className="text-sm text-muted-foreground">No users available.</div>
+                        ) : (
+                          users.map(u => (
+                            <button
+                              key={u.id}
+                              onClick={() => setSelectedChatUserId(u.id)}
+                              className={`w-72 mx-auto text-left p-3 rounded-lg border transition flex items-center gap-3 ${ (selectedChatUserId || users[0]?.id) === u.id ? 'bg-primary/10 border-primary/20' : 'bg-card border-border hover:bg-muted/40'}`}
+                            >
+                              <Avatar className="h-8 w-8"><AvatarFallback>{(u.name || u.email).slice(0,2).toUpperCase()}</AvatarFallback></Avatar>
+                              <div className="flex-1">
+                                <div className="font-medium whitespace-normal break-words leading-tight">{u.name}</div>
+                              </div>
+                              <div className="ml-auto shrink-0"><Badge variant="secondary">{u.count}</Badge></div>
+                            </button>
+                          ))
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Chat area */}
+                  <div className="md:col-span-7 lg:col-span-8">
+                    <ChatPanel
+                      messages={activeMessages}
+                      input={activeInput}
+                      setInput={setActiveInput}
+                      pending={activePending}
+                      onSend={() => {
+                        const text = activeInput.trim();
+                        const activeId = selectedChatUserId || users[0]?.id || null;
+                        if (!activeId || !text) return;
+                        if (!user) { toast.error('Not authenticated'); return; }
+                        const appId = getAppIdForUser(activeId);
+                        if (!appId) { toast.error('No application found for this user'); return; }
+                        setPending(true);
+                        sendApplicationMessage(appId, { text, byUid: user.uid, byRole: 'admin' })
+                          .then(() => {
+                            setActiveInput('');
+                            // Realtime listener will append the new message
+                          })
+                          .catch((e: any) => toast.error(e?.message || 'Failed to send message'))
+                          .finally(() => setPending(false));
+                      }}
+                      placeholder="Type a message to the client..."
+                      emptyState="No messages yet. Start a conversation with this user."
+                    />
+                  </div>
+                </div>
+              );
+            })()}
+          </TabsContent>
               <TabsContent value="overview" className="space-y-6">
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -1120,14 +1399,13 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                             <th className="px-4 py-3 font-medium">Plan</th>
                             <th className="px-4 py-3 font-medium">Status</th>
                             <th className="px-4 py-3 font-medium">Email</th>
-                            <th className="px-4 py-3 font-medium">ID</th>
                             <th className="px-4 py-3 font-medium text-right">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
                           {filteredVisaEdRegs.length === 0 ? (
                             <tr>
-                              <td colSpan={6} className="px-4 py-6 text-center text-muted-foreground">No enrollments found</td>
+                              <td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">No enrollments found</td>
                             </tr>
                           ) : (
                             filteredVisaEdRegs.map((r) => (
@@ -1143,9 +1421,6 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                                 </td>
                                 <td className="px-4 py-3 max-w-[18rem]">
                                   <div className="truncate" title={r.userEmail || ''}>{r.userEmail || '—'}</div>
-                                </td>
-                                <td className="px-4 py-3 max-w-[10rem]">
-                                  <div className="font-mono text-xs opacity-80 truncate" title={r.id}>{r.id}</div>
                                 </td>
                                 <td className="px-4 py-3">
                                   <div className="flex items-center gap-2 justify-end">
