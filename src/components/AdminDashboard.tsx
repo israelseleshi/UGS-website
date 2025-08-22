@@ -256,7 +256,13 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
     }
     try {
       chatMessagesUnsub.current = subscribeDirectMessages(userId, (items) => {
-        const mapped: UiChatMessage[] = items.map(it => ({ id: it.id, text: it.text, by: it.byRole === 'admin' ? 'admin' : 'user', at: undefined }));
+        const mapped: UiChatMessage[] = items.map(it => ({
+          id: it.id,
+          text: it.text,
+          // In ChatPanel, 'user' is rendered on the right. For admin view, our own messages should be right-aligned.
+          by: it.byRole === 'admin' ? 'user' : 'admin',
+          at: (it as any)?.createdAt?.toDate?.()?.toLocaleString?.() || undefined,
+        }));
         setChatByUser(prev => ({ ...prev, [activeId as string]: mapped }));
       });
     } catch {
@@ -370,7 +376,7 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
       <div className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 dark:bg-gray-950/80 border-b border-white/20 dark:border-gray-800/50">
         <div className="site-container">
           <div className="flex items-center justify-between h-20">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
               <MobileMenuButton onClick={() => setMobileSidebarOpen(true)} />
               {/* Desktop sidebar toggle */}
               <Button
@@ -381,7 +387,7 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                 aria-label="Toggle sidebar"
                 title="Toggle sidebar"
               >
-                <Menu className="w-5 h-5" />
+                <Menu className="w-6 h-6" />
               </Button>
               <div className="flex items-center space-x-3">
                 <div className="w-8 h-8 bg-gradient-to-br from-primary to-red-600 rounded-lg flex items-center justify-center">
@@ -447,7 +453,7 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
             <DialogDescription className="text-white/80">Full application information and quick actions</DialogDescription>
           </DialogHeader>
 
-          <div className="p-4 sm:p-5 space-y-6 overflow-x-hidden overflow-y-auto flex-1 break-words">
+          <div className="p-4 sm:p-5 space-y-4 overflow-x-hidden overflow-y-auto flex-1 break-words">
             {detailsLoading ? (
               <div className="space-y-3">
                 <div className="h-4 w-40 bg-muted rounded animate-pulse" />
@@ -458,10 +464,10 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
             ) : !selectedApp ? (
               <div className="text-sm text-muted-foreground">No data available.</div>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-muted-foreground">Client</p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1"><User className="w-3.5 h-3.5" /> Client</p>
                     <p className="font-semibold">
                       {`${selectedApp.personalInfo?.firstName ?? ''} ${selectedApp.personalInfo?.lastName ?? ''}`.trim() || 'Unknown'}
                     </p>
@@ -471,38 +477,38 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                   </Badge>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                   <div>
-                    <p className="text-xs text-muted-foreground">Email</p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1"><Mail className="w-3.5 h-3.5" /> Email</p>
                     <p className="break-words">{selectedApp.userEmail || selectedApp.personalInfo?.email || '—'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Phone</p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> Phone</p>
                     <p>{selectedApp.personalInfo?.phone || '—'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Service</p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1"><FileText className="w-3.5 h-3.5" /> Service</p>
                     <p>{getServiceDisplayName(selectedApp.travel?.serviceType)}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Country</p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1"><Flag className="w-3.5 h-3.5" /> Country</p>
                     <p>{selectedApp.travel?.destination || '—'}</p>
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <p className="text-sm font-medium">Travel Details</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                     <div>
-                      <p className="text-xs text-muted-foreground">Purpose</p>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1"><Plane className="w-3.5 h-3.5" /> Purpose</p>
                       <p>{selectedApp.travel?.purpose || '—'}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Dates</p>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> Dates</p>
                       <p>{selectedApp.travel?.travelDate || '—'} → {selectedApp.travel?.returnDate || '—'}</p>
                     </div>
                     <div className="sm:col-span-2">
-                      <p className="text-xs text-muted-foreground">Accommodation</p>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1"><Building className="w-3.5 h-3.5" /> Accommodation</p>
                       <p className="break-words">{selectedApp.travel?.accommodation || '—'}</p>
                     </div>
                   </div>
@@ -510,17 +516,17 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
 
                 <div className="space-y-2">
                   <p className="text-sm font-medium">Additional</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                     <div>
-                      <p className="text-xs text-muted-foreground">Processing Speed</p>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> Processing Speed</p>
                       <p>{selectedApp.additionalInfo?.processingSpeed || '—'}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Consultation</p>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1"><UserPlus className="w-3.5 h-3.5" /> Consultation</p>
                       <p>{selectedApp.additionalInfo?.consultationNeeded ? 'Yes' : 'No'}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Document Review</p>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1"><ShieldCheck className="w-3.5 h-3.5" /> Document Review</p>
                       <p>{selectedApp.additionalInfo?.documentReview ? 'Yes' : 'No'}</p>
                     </div>
                   </div>
@@ -550,26 +556,14 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
           </div>
 
           <DialogFooter className="p-4 sm:p-5 pt-0">
-            {/* Primary contact actions above status controls with ample spacing */}
-            <div className="grid grid-cols-2 gap-2 w-full mb-3">
-              <Button variant="secondary" onClick={() => selectedAppId && navigator.clipboard.writeText(selectedAppId)}>
-                <Clipboard className="w-4 h-4 mr-2" /> Copy ID
-              </Button>
-              <Button variant="outline" onClick={() => {
-                const email = selectedApp?.userEmail || selectedApp?.personalInfo?.email;
-                if (email) window.open(`mailto:${email}`);
-              }}>
-                <Mail className="w-4 h-4 mr-2" /> Email
-              </Button>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
-              <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => updateSelectedStatus('in_review')}>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full">
+              <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => updateSelectedStatus('in_review')}>
                 <Clock className="w-4 h-4 mr-2" /> In Review
               </Button>
-              <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => updateSelectedStatus('approved')}>
+              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => updateSelectedStatus('approved')}>
                 <Check className="w-4 h-4 mr-2" /> Approve
               </Button>
-              <Button variant="destructive" className="bg-red-600 hover:bg-red-700" onClick={() => updateSelectedStatus('rejected')}>
+              <Button size="sm" variant="destructive" className="bg-red-600 hover:bg-red-700" onClick={() => updateSelectedStatus('rejected')}>
                 <XCircle className="w-4 h-4 mr-2" /> Reject
               </Button>
             </div>

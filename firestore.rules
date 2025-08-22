@@ -42,17 +42,18 @@ service cloud.firestore {
 
     // Visa applications: owner can create/read; updates only while draft and cannot change status; admin full access
     match /visaApplications/{appId} {
-      allow read: if (isVerified() && resource.data.uid == request.auth.uid) || isAdmin();
-      allow create: if (isVerified() && request.resource.data.uid == request.auth.uid) || isAdmin();
+      // Allow signed-in owners to read/create their own applications (no email verification requirement)
+      allow read: if (isSignedIn() && resource.data.uid == request.auth.uid) || isAdmin();
+      allow create: if (isSignedIn() && request.resource.data.uid == request.auth.uid) || isAdmin();
       // Owner updates allowed only while draft and status unchanged; admin can always update
       allow update: if isAdmin() || (
-        isVerified() && request.resource.data.uid == request.auth.uid &&
+        isSignedIn() && request.resource.data.uid == request.auth.uid &&
         resource.data.status == 'draft' &&
         request.resource.data.status == resource.data.status
       );
       // Delete: admin always; owner only if draft
       allow delete: if isAdmin() || (
-        isVerified() && resource.data.uid == request.auth.uid && resource.data.status == 'draft'
+        isSignedIn() && resource.data.uid == request.auth.uid && resource.data.status == 'draft'
       );
 
       // Messages subcollection for admin<>client chat
@@ -60,7 +61,7 @@ service cloud.firestore {
         function appOwner() {
           return get(/databases/$(database)/documents/visaApplications/$(appId)).data.uid == request.auth.uid;
         }
-        allow read: if isAdmin() || (isVerified() && appOwner());
+        allow read: if isAdmin() || (isSignedIn() && appOwner());
         // Only the application owner (client) or an admin may create a message.
         // Validate message schema and sender identity/role.
         allow create: if (
@@ -73,7 +74,7 @@ service cloud.firestore {
           request.resource.data.keys().hasOnly(['text','byUid','byRole','createdAt'])
         ) || (
           // Client (owner) sending to admin
-          isVerified() && appOwner() &&
+          isSignedIn() && appOwner() &&
           request.resource.data.byUid == request.auth.uid &&
           request.resource.data.byRole == 'user' &&
           request.resource.data.text is string &&
@@ -100,8 +101,38 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    // Top-level direct messages between a client (user) and admin
+    // Schema: { userId, text, byUid, byRole, createdAt }
     match /messages/{docId} {
-      allow read, write: if isAdmin();
+      // Clients can read their own thread; admins can read all
+      allow read: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+
+      // Creation rules:
+      // - Client can write their own messages (byRole 'user') only for their own userId
+      // - Admin can write messages to any user (byRole 'admin')
+      allow create: if (
+        // Client sending
+        isSignedIn() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.byUid == request.auth.uid &&
+        request.resource.data.byRole == 'user' &&
+        request.resource.data.text is string &&
+        request.resource.data.text.size() > 0 &&
+        request.resource.data.keys().hasOnly(['userId','text','byUid','byRole','createdAt'])
+      ) || (
+        // Admin sending
+        isAdmin() &&
+        request.resource.data.byRole == 'admin' &&
+        request.resource.data.byUid == request.auth.uid &&
+        request.resource.data.userId is string &&
+        request.resource.data.text is string &&
+        request.resource.data.text.size() > 0 &&
+        request.resource.data.keys().hasOnly(['userId','text','byUid','byRole','createdAt'])
+      );
+
+      // Immutable after write; admin may delete if necessary
+      allow update: if false;
+      allow delete: if isAdmin();
     }
 
     match /audits/{docId} {

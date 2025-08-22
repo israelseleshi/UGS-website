@@ -61,14 +61,23 @@ export function subscribeDirectMessages(
   userId: string,
   cb: (items: (DirectMessage & { id: string })[]) => void,
 ) {
+  // Use simple equality filter to avoid requiring a composite index; sort client-side by createdAt
   const q = query(
     collection(getDb(), 'messages'),
-    where('userId', '==', userId),
-    orderBy('createdAt', 'asc')
+    where('userId', '==', userId)
   );
   const unsub = onSnapshot(q, (snap) => {
-    const items = snap.docs.map(d => ({ id: d.id, ...(d.data() as DirectMessage) }));
+    const items = snap.docs
+      .map(d => ({ id: d.id, ...(d.data() as DirectMessage) }))
+      .sort((a, b) => {
+        const ta = (a.createdAt as any)?.toMillis?.() ?? (a as any)?.createdAt?.seconds ?? 0;
+        const tb = (b.createdAt as any)?.toMillis?.() ?? (b as any)?.createdAt?.seconds ?? 0;
+        return ta - tb;
+      });
     cb(items);
+  }, (err) => {
+    // Surface errors in console to aid debugging (e.g., index/rules issues)
+    console.error('subscribeDirectMessages error:', err);
   });
   return unsub;
 }
@@ -352,6 +361,21 @@ export async function listUserApplications(uid: string, pageSize = 20, cursor?: 
   const baseQuery = query(
     collection(getDb(), "visaApplications"),
     where("uid", "==", uid),
+    orderBy("createdAt", "desc"),
+    limit(pageSize),
+  );
+  const q = cursor ? query(baseQuery, startAfter(cursor)) : baseQuery;
+  const snap = await getDocs(q);
+  const items = snap.docs.map((d) => ({ id: d.id, ...(d.data() as VisaApplication) }));
+  const nextCursor = snap.docs[snap.docs.length - 1];
+  return { items, nextCursor };
+}
+
+// Fallback: list applications by stored email (some historical docs may miss uid or be copied between envs)
+export async function listUserApplicationsByEmail(email: string, pageSize = 20, cursor?: QueryDocumentSnapshot) {
+  const baseQuery = query(
+    collection(getDb(), "visaApplications"),
+    where("userEmail", "==", email),
     orderBy("createdAt", "desc"),
     limit(pageSize),
   );

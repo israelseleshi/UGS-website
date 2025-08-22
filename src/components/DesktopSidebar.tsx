@@ -1,6 +1,6 @@
 import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from './avatar';
-import { Globe, LogOut } from 'lucide-react';
+import { Globe, LogOut, Menu } from 'lucide-react';
 
 export interface SidebarItem {
   value: string;
@@ -25,10 +25,11 @@ interface DesktopSidebarProps {
   onLogout?: () => void;
 }
 
-export function DesktopSidebar({ items, selected, onSelect, className = '', collapsed = false, userData, headerTitle, headerSubtitle, onLogout }: DesktopSidebarProps) {
+export function DesktopSidebar({ items, selected, onSelect, className = '', collapsed = false, userData, headerTitle, headerSubtitle, onLogout, onToggleCollapse }: DesktopSidebarProps) {
   return (
     <div className={`h-full ${className}`}>
       <div className={`flex flex-col h-full w-full overflow-y-auto backdrop-blur-xl bg-white/60 dark:bg-gray-900/60 border-r border-white/20 dark:border-gray-800/20 shadow-2xl px-3 py-4`}>
+        {/* Sidebar top spacing preserved; internal toggle intentionally removed */}
         {/* Brand/Header */}
         {(headerTitle || headerSubtitle) ? (
           <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'} w-full px-2 py-2 mb-2`}>
@@ -53,7 +54,7 @@ export function DesktopSidebar({ items, selected, onSelect, className = '', coll
           <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-start'} w-full px-2 py-2`}>
             <Avatar className={`${collapsed ? 'w-8 h-8' : 'w-10 h-10'} ring-1 ring-white/40 dark:ring-white/10 shadow` }>
               {userData.avatar ? (
-                <AvatarImage src={userData.avatar} alt={userData.name} />
+                <AvatarImage className="object-cover" src={userData.avatar} alt={userData.name} />
               ) : null}
               <AvatarFallback className="bg-gradient-to-r from-red-500 to-pink-500 text-white">
                 {userData.name

@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
 
 import {
   Card,
@@ -73,11 +72,11 @@ import {
   Moon,
   BarChart3,
   Menu,
-  X,
 } from "lucide-react";
 import { getTheme as readTheme, toggleTheme as flipTheme, type AppTheme } from "./theme";
 import { useAuth } from "../lib/auth";
-import { getUser, listUserApplications, upsertUser, sendDirectMessage, subscribeDirectMessages, createVisaApplication, type AppMessage } from "../lib/db";
+import { getUser, listUserApplications, listUserApplicationsByEmail, upsertUser, sendDirectMessage, subscribeDirectMessages, type AppMessage } from "../lib/db";
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './dialog';
 import { MobileSidebar, MobileMenuButton } from './MobileSidebar';
 import { useIsMobile } from './use-mobile';
@@ -111,7 +110,8 @@ export function ClientDashboard({
   const [supportAppId, setSupportAppId] = useState<string | null>(null);
   const [supportMessages, setSupportMessages] = useState<(AppMessage & { id: string })[]>([]);
   const [supportInput, setSupportInput] = useState('');
-  const [supportLoading, setSupportLoading] = useState(false);
+  const [supportLoading, setSupportLoading] = useState(false); // subscription state
+  const [supportSending, setSupportSending] = useState(false); // sending state
   const supportUnsub = React.useRef<undefined | (() => void)>(undefined);
 
   React.useEffect(() => {
@@ -179,8 +179,15 @@ export function ClientDashboard({
         }
 
         try {
-          const { items } = await listUserApplications(user.uid, 20);
-          const mapped = (items || []).map((it: any) => ({
+          let itemsResp = await listUserApplications(user.uid, 20);
+          // Fallback to email-based query if UID-based returns empty
+          if ((!itemsResp.items || itemsResp.items.length === 0) && user.email) {
+            try {
+              itemsResp = await listUserApplicationsByEmail(user.email, 20);
+            } catch {}
+          }
+          const items = itemsResp.items || [];
+          const mapped = items.map((it: any) => ({
             id: it.id,
             type: it?.travel?.purpose || "Visa Application",
             country: it?.travel?.destination || "—",
@@ -195,9 +202,28 @@ export function ClientDashboard({
           }));
           if (!ignore) {
             setApplications(mapped);
-            // Default Support tab to most recent application if available
-            if (!supportAppId && items && items.length > 0) {
-              setSupportAppId(items[0].id);
+            // Default Support tab context to most recent application
+            if (items && items.length > 0) {
+              if (!supportAppId) setSupportAppId(items[0].id);
+              // If redirected from ServiceRequest, open Messages for the newly submitted app
+              try {
+                const shouldOpen = sessionStorage.getItem('ugs_open_messages') === '1';
+                const lastId = sessionStorage.getItem('ugs_last_app_id');
+                if (shouldOpen) {
+                  if (lastId && items.some((i:any) => i.id === lastId)) {
+                    setSupportAppId(lastId);
+                  }
+                  setSelectedTab('messages');
+                  sessionStorage.removeItem('ugs_open_messages');
+                  sessionStorage.removeItem('ugs_last_app_id');
+                } else if (selectedTab === 'overview') {
+                  // Otherwise, if they landed with existing apps, prefer opening Messages by default
+                  setSelectedTab('messages');
+                }
+              } catch {
+                // If sessionStorage blocked, still default-select Messages on first load
+                if (selectedTab === 'overview') setSelectedTab('messages');
+              }
             }
           }
         } catch {
@@ -211,10 +237,10 @@ export function ClientDashboard({
     };
   }, [user]);
 
-  // Manage Support tab subscription lifecycle (top-level user messages)
+  // Manage Messages tab subscription lifecycle (top-level user messages)
   React.useEffect(() => {
-    // Only subscribe when on Support tab and we have user
-    if (selectedTab !== 'support' || !user) {
+    // Only subscribe when on Messages tab and we have user
+    if (selectedTab !== 'messages' || !user) {
       supportUnsub.current?.();
       supportUnsub.current = undefined;
       return;
@@ -231,35 +257,9 @@ export function ClientDashboard({
     };
   }, [selectedTab, user]);
 
-  async function createNewApplication() {
-    if (!user) return;
-    try {
-      const created = await createVisaApplication(user.uid, {
-        status: 'draft',
-        personalInfo: { firstName: '', lastName: '', email: user.email ?? '' },
-        travel: { destination: '', serviceType: '' },
-      });
-      const id = (created as any)?.id as string;
-      // Optimistically add to local list
-      setApplications((prev) => [
-        {
-          id,
-          type: 'Visa Application',
-          country: '',
-          status: 'Draft',
-          submittedDate: '',
-          expectedDate: '',
-          progress: 10,
-          documents: 0,
-          amount: '',
-          priority: 'Standard',
-          officer: '',
-        },
-        ...prev,
-      ]);
-      // Prepare Support chat for the new app
-      setSelectedTab('support');
-    } catch {}
+  function createNewApplication() {
+    // Do not create a draft automatically. Navigate to the service request form.
+    onPageChange('request');
   }
 
   async function openMessages(appId: string) {
@@ -289,9 +289,14 @@ export function ClientDashboard({
   async function sendSupportMsg() {
     if (!user || !supportInput.trim()) return;
     try {
+      setSupportSending(true);
       await sendDirectMessage(user.uid, { text: supportInput.trim(), byUid: user.uid, byRole: 'user' });
       setSupportInput('');
-    } catch {}
+    } catch (e: any) {
+      toast?.error?.(e?.message || 'Failed to send message');
+    } finally {
+      setSupportSending(false);
+    }
   }
 
   function formatDate(ts: any): string {
@@ -358,21 +363,19 @@ export function ClientDashboard({
     { value: 'overview', label: 'Overview', icon: BarChart3 },
     { value: 'applications', label: 'Applications', icon: FileText, badge: applications.length.toString() },
     { value: 'documents', label: 'Documents', icon: Upload },
-    { value: 'support', label: 'Support', icon: MessageSquare },
+    { value: 'messages', label: 'Messages', icon: MessageSquare },
     { value: 'profile', label: 'Profile', icon: User },
     { value: 'settings', label: 'Settings', icon: Settings }
   ];
 
   return (
     <div className="min-h-screen no-hscroll bg-gradient-to-br from-slate-50 via-white to-blue-50/30 dark:from-slate-950 dark:via-gray-900 dark:to-blue-950/20">
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
+      <div
         className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 dark:bg-gray-950/80 border-b border-white/20 dark:border-gray-800/50"
       >
         <div className="site-container">
           <div className="flex flex-wrap items-center justify-between gap-3 h-20">
-            <div className="flex items-center space-x-6">
+            <div className="flex items-center space-x-4 -ml-1">
               <MobileMenuButton onClick={() => setMobileSidebarOpen(true)} />
               {/* Desktop sidebar toggle */}
               <Button
@@ -383,13 +386,9 @@ export function ClientDashboard({
                 aria-label="Toggle sidebar"
                 title="Toggle sidebar"
               >
-                {isSidebarCollapsed ? (
-                  <X className="w-5 h-5" />
-                ) : (
-                  <Menu className="w-5 h-5" />
-                )}
+                <Menu className="w-6 h-6" />
               </Button>
-              <motion.div whileHover={{ scale: 1.05 }} className="flex items-center space-x-3">
+              <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-red-500 via-pink-500 to-orange-500 rounded-xl flex items-center justify-center shadow-lg">
                   <Globe className="w-6 h-6 text-white" />
                 </div>
@@ -397,7 +396,7 @@ export function ClientDashboard({
                   <h1 className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">UGS Client Portal</h1>
                   <p className="text-xs text-gray-500 dark:text-gray-400">Premium Dashboard</p>
                 </div>
-              </motion.div>
+              </div>
             </div>
             <div className="flex items-center space-x-2 sm:space-x-3">
               <Button variant="ghost" size="sm" onClick={() => setTheme(flipTheme())} className="relative w-9 h-9 p-0" aria-label="Toggle theme">
@@ -414,7 +413,7 @@ export function ClientDashboard({
             </div>
           </div>
         </div>
-      </motion.div>
+      </div>
 
       {/* Fixed left desktop sidebar; full height with collapse/expand */}
       <div className="hidden lg:flex fixed left-0 top-20 bottom-0 z-30 items-stretch"
@@ -428,8 +427,6 @@ export function ClientDashboard({
             userData={{ name: clientData.name, email: clientData.email, status: clientData.status, avatar: clientData.profileImage || undefined }}
             collapsed={isSidebarCollapsed && !isSidebarHovered}
             onToggleCollapse={() => setIsSidebarCollapsed(v => !v)}
-            headerTitle="UGS Client Portal"
-            headerSubtitle="Premium Dashboard"
             onLogout={onLogout}
           />
         </div>
@@ -441,7 +438,7 @@ export function ClientDashboard({
           <div className={`col-span-12 lg:col-span-12 transition-all duration-300 ${ (isSidebarCollapsed && !isSidebarHovered) ? 'lg:pl-16' : 'lg:pl-64' }`}>
             {selectedTab === "overview" && (
               <div className="space-y-8">
-                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }}>
+                <div>
                   <Card className="relative overflow-hidden bg-gradient-to-br from-red-500 via-pink-500 to-orange-500 text-white border-0 shadow-2xl">
                     <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent" />
                     <CardContent className="relative p-8 lg:p-12">
@@ -469,15 +466,15 @@ export function ClientDashboard({
                             </div>
                           </div>
                         </div>
-                        <motion.div animate={{ rotate: 360 }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }} className="opacity-20">
+                        <div className="opacity-20">
                           <Gem className="w-24 h-24" />
-                        </motion.div>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
-                </motion.div>
+                </div>
 
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10">
                   {(() => {
                     const total = applications.length;
                     const approved = applications.filter((a) => a.status === 'Approved').length;
@@ -490,7 +487,7 @@ export function ClientDashboard({
                       { title: 'Countries Mentioned', value: String(countries), change: '', icon: Globe, gradient: 'from-orange-500 to-red-500' },
                     ];
                     return stats.map((stat, index) => (
-                      <motion.div key={index} whileHover={{ scale: 1.02, y: -5 }} transition={{ type: "spring", stiffness: 300 }}>
+                      <div key={index}>
                         <Card className="relative overflow-hidden bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl">
                           <CardContent className="p-6 lg:p-8">
                             <div className="flex items-center justify-between">
@@ -504,15 +501,15 @@ export function ClientDashboard({
                               </div>
                             </div>
                           </CardContent>
-                          <motion.div className={`absolute bottom-0 left-0 h-1 bg-gradient-to-r ${stat.gradient}`} initial={{ width: 0 }} animate={{ width: "100%" }} transition={{ delay: 0.5 + index * 0.1, duration: 0.8 }} />
+                          <div className={`absolute bottom-0 left-0 h-1 bg-gradient-to-r ${stat.gradient} w-full`} />
                         </Card>
-                      </motion.div>
+                      </div>
                     ));
                   })()}
-                </motion.div>
+                </div>
 
                 <div className="grid lg:grid-cols-3 gap-8">
-                  <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }} className="lg:col-span-2">
+                  <div className="lg:col-span-2">
                     <Card className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl">
                       <CardHeader>
                         <CardTitle className="flex items-center space-x-2"><FileText className="w-5 h-5 text-primary" /><span>Recent Applications</span></CardTitle>
@@ -520,7 +517,7 @@ export function ClientDashboard({
                       </CardHeader>
                       <CardContent className="space-y-6 lg:space-y-8">
                         {applications.slice(0, 3).map((app, index) => (
-                          <motion.div key={app.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 * index }} whileHover={{ scale: 1.02 }} className="p-5 md:p-6 rounded-xl bg-gradient-to-r from-white to-gray-50 dark:from-gray-800 dark:to-gray-700 border border-white/50 dark:border-gray-700/50 shadow-lg">
+                          <div key={app.id} className="p-5 md:p-6 rounded-xl bg-gradient-to-r from-white to-gray-50 dark:from-gray-800 dark:to-gray-700 border border-white/50 dark:border-gray-700/50 shadow-lg">
                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                               <div className="flex items-center space-x-3">
                                 <div className="w-10 h-10 bg-gradient-to-r from-red-500 to-pink-500 rounded-lg flex items-center justify-center">
@@ -545,13 +542,13 @@ export function ClientDashboard({
                               <div className="text-xs text-gray-500">Submitted: {app.submittedDate || '—'}</div>
                               <Button size="sm" variant="outline" onClick={() => openMessages(app.id)}><MessageSquare className="w-4 h-4 mr-2" /> Messages</Button>
                             </div>
-                          </motion.div>
+                          </div>
                         ))}
                       </CardContent>
                     </Card>
-                  </motion.div>
+                  </div>
 
-                  <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 }} className="space-y-6 lg:space-y-8">
+                  <div className="space-y-6 lg:space-y-8">
                     <Card className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl">
                       <CardHeader>
                         <CardTitle className="flex items-center space-x-2"><Clock className="w-5 h-5 text-primary" /><span>Recent Activity</span></CardTitle>
@@ -566,45 +563,47 @@ export function ClientDashboard({
                         <CardTitle className="flex items-center space-x-2"><Sparkles className="w-5 h-5" /><span>Quick Actions</span></CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-3">
-                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                          <Button variant="secondary" className="w-full justify-start bg-white/20 hover:bg-white/30 text-white border-0" onClick={createNewApplication}>
+                        <div>
+                          <Button variant="secondary" className="w-full justify-start bg-white/20 hover:bg-white/30 text-white border-0" onClick={() => onPageChange('request')}>
                             <Plus className="w-4 h-4 mr-2" />
                             New Application
                           </Button>
-                        </motion.div>
-                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                        </div>
+                        <div>
                           <Button variant="secondary" className="w-full justify-start bg-white/20 hover:bg-white/30 text-white border-0">
                             <Upload className="w-4 h-4 mr-2" />
                             Upload Document
                           </Button>
-                        </motion.div>
-                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                        </div>
+                        <div>
                           <Button variant="secondary" className="w-full justify-start bg-white/20 hover:bg-white/30 text-white border-0">
                             <MessageSquare className="w-4 h-4 mr-2" />
                             Contact Support
                           </Button>
-                        </motion.div>
+                        </div>
                       </CardContent>
                     </Card>
-                  </motion.div>
+                  </div>
                 </div>
               </div>
             )}
 
             {selectedTab === "applications" && (
               <div className="space-y-6">
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
+                <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">My Applications</h2>
                     <p className="text-gray-600 dark:text-gray-400">Manage and track your visa applications</p>
                   </div>
-                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                    <Button className="bg-gradient-to-r from-red-500 to-pink-500" onClick={createNewApplication}>
-                      <Plus className="w-4 h-4 mr-2" />
-                      New Application
-                    </Button>
-                  </motion.div>
-                </motion.div>
+                  {applications.length > 0 && (
+                    <div>
+                      <Button className="bg-gradient-to-r from-red-500 to-pink-500" onClick={createNewApplication}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        New Application
+                      </Button>
+                    </div>
+                  )}
+                </div>
 
                 {applications.length === 0 ? (
                   <Card className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl">
@@ -619,7 +618,7 @@ export function ClientDashboard({
                 ) : (
                 <div className="space-y-6">
                   {applications.map((app, index) => (
-                    <motion.div key={app.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 * index }} whileHover={{ scale: 1.02 }}>
+                    <div key={app.id}>
                       <Card className="overflow-hidden bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl">
                         <CardContent className="p-6">
                           <div className="grid lg:grid-cols-4 gap-6">
@@ -657,20 +656,20 @@ export function ClientDashboard({
                               </div>
                             </div>
                             <div className="flex flex-col space-y-2">
-                              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                              <div>
                                 <Button variant="outline" size="sm" className="w-full"><Eye className="w-4 h-4 mr-2" />View Details</Button>
-                              </motion.div>
-                              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                              </div>
+                              <div>
                                 <Button variant="outline" size="sm" className="w-full"><Download className="w-4 h-4 mr-2" />Download</Button>
-                              </motion.div>
-                              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                              </div>
+                              <div>
                                 <Button variant="outline" size="sm" className="w-full"><MessageSquare className="w-4 h-4 mr-2" />Contact Officer</Button>
-                              </motion.div>
+                              </div>
                             </div>
                           </div>
                         </CardContent>
                       </Card>
-                    </motion.div>
+                    </div>
                   ))}
                 </div>
                 )}
@@ -679,7 +678,7 @@ export function ClientDashboard({
 
             {selectedTab === "documents" && (
               <div className="space-y-6">
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
+                <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">Document Manager</h2>
                     <p className="text-gray-600 dark:text-gray-400">Securely store and manage your visa documents</p>
@@ -693,7 +692,7 @@ export function ClientDashboard({
                       <Upload className="w-4 h-4 mr-2" /> Upload Document
                     </Button>
                   </div>
-                </motion.div>
+                </div>
 
                 <Card className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl">
                   <CardContent className="p-0">
@@ -703,95 +702,51 @@ export function ClientDashboard({
               </div>
             )}
 
-            {selectedTab === "support" && (
-              <div className="space-y-6">
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-                  <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent mb-2">Premium Support Center</h2>
-                  <p className="text-gray-600 dark:text-gray-400">Get expert help from our dedicated support team</p>
-                </motion.div>
-
-                {/* App context (no dropdown). Auto-select most recent in loader. */}
-                {applications.length > 0 && (
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    Chatting about: <span className="font-medium text-foreground">{(applications.find(a => a.id === supportAppId) || applications[0])?.type} • {(applications.find(a => a.id === supportAppId) || applications[0])?.country}</span>
-                  </div>
-                )}
-                {applications.length === 0 ? (
-                  <Card className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl">
-                    <CardContent className="p-6 flex items-center justify-between gap-3">
-                      <p className="text-sm text-gray-600 dark:text-gray-400">You don’t have any applications yet. Create one to start chatting with support.</p>
-                      <Button className="bg-gradient-to-r from-red-500 to-pink-500" onClick={createNewApplication}>
-                        <Plus className="w-4 h-4 mr-2" /> New Application
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ) : supportAppId ? (
-                  <ChatPanel
-                    title="Support Chat"
-                    description="Chat with UGS support about your application"
-                    messages={(supportMessages || []).map((m) => ({
-                      id: m.id,
-                      text: (m as any).text,
-                      by: (m as any).byRole,
-                      at: (m as any)?.createdAt?.toDate?.()?.toLocaleString?.() || undefined,
-                    }))}
-                    pending={supportLoading}
-                    input={supportInput}
-                    setInput={setSupportInput}
-                    onSend={sendSupportMsg}
-                    placeholder="Type your message to support..."
-                    emptyState="No messages yet. Start the conversation with support."
-                  />
-                ) : (
-                  <Card className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl">
-                    <CardContent className="p-6">
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Preparing chat…</p>
-                    </CardContent>
-                  </Card>
-                )}
-
-                <div className="grid md:grid-cols-3 gap-6">
-                  {[{ title: 'Live Chat Support', desc: '24/7 instant assistance', icon: MessageSquare, btn: 'Start Chat', color: 'from-emerald-500 to-green-500' }, { title: 'Video Consultation', desc: 'Face-to-face expert guidance', icon: Camera, btn: 'Book Call', color: 'from-indigo-500 to-blue-500' }, { title: 'Priority Phone Line', desc: 'Direct access to specialists', icon: Phone, btn: 'Call Now', color: 'from-purple-500 to-pink-500' }].map((s, idx) => (
-                    <Card key={idx} className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl">
-                      <CardContent className="p-6 text-center">
-                        <div className={`mx-auto w-12 h-12 rounded-xl bg-gradient-to-r ${s.color} flex items-center justify-center mb-3`}>
-                          <s.icon className="w-6 h-6 text-white" />
-                        </div>
-                        <div className="font-semibold mb-1">{s.title}</div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400 mb-4">{s.desc}</div>
-                        <Button variant="outline" className="mx-auto">{s.btn}</Button>
-                      </CardContent>
-                    </Card>
-                  ))}
+            {selectedTab === "messages" && (
+              <div className="space-y-4">
+                <div>
+                  <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent mb-2">Messages</h2>
+                  <p className="text-gray-600 dark:text-gray-400">Chat with UGS support</p>
                 </div>
+
+                <ChatPanel
+                  title="Messages"
+                  description="Chat interface"
+                  messages={(supportMessages || []).map((m) => ({
+                    id: m.id,
+                    text: (m as any).text,
+                    by: (m as any).byRole,
+                    at: (m as any)?.createdAt?.toDate?.()?.toLocaleString?.() || undefined,
+                  }))}
+                  pending={supportSending}
+                  input={supportInput}
+                  setInput={setSupportInput}
+                  onSend={sendSupportMsg}
+                  placeholder="Type your message to support..."
+                  emptyState="No messages yet. Start the conversation with support."
+                />
               </div>
             )}
 
             {selectedTab === "profile" && (
               <div className="space-y-6">
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+                <div>
                   <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent mb-2">My Profile</h2>
                   <p className="text-gray-600 dark:text-gray-400">Manage your personal information and preferences</p>
-                </motion.div>
+                </div>
 
                 <div className="grid lg:grid-cols-3 gap-8">
-                  <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
+                  <div>
                     <Card className="text-center bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl">
                       <CardContent className="p-6">
                         <div className="flex flex-col items-center gap-4">
                           <div className="relative">
-                            <Avatar className="w-24 h-24">
-                              <AvatarImage src={clientData.profileImage || undefined} alt={clientData.name} />
-                              <AvatarFallback>{clientData.name?.slice(0,2).toUpperCase()}</AvatarFallback>
-                            </Avatar>
-                            <button
-                              type="button"
-                              className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-md border border-white/70"
-                              title="Update photo"
-                              aria-label="Update photo"
-                            >
-                              <Camera className="w-4 h-4" />
-                            </button>
+                            <AvatarUpload
+                              mode="overlay"
+                              sizePx={96}
+                              className="[&>div]:rounded-full"
+                              onUploaded={(url) => setClientData((prev) => ({ ...prev, profileImage: url }))}
+                            />
                           </div>
                           <div>
                             <h3 className="text-xl font-semibold">{clientData.name}</h3>
@@ -805,8 +760,8 @@ export function ClientDashboard({
                         </div>
                       </CardContent>
                     </Card>
-                  </motion.div>
-                  <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }} className="lg:col-span-2">
+                  </div>
+                  <div className="lg:col-span-2">
                     <Card className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl">
                       <CardHeader>
                         <CardTitle className="flex items-center space-x-2"><User className="w-5 h-5 text-primary" /><span>Personal Information</span></CardTitle>
@@ -840,26 +795,25 @@ export function ClientDashboard({
                         </div>
                       </CardContent>
                     </Card>
-                  </motion.div>
+                  </div>
                 </div>
               </div>
             )}
 
             {selectedTab === "settings" && (
               <div className="space-y-6">
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+                <div>
                   <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent mb-2">Settings & Preferences</h2>
                   <p className="text-gray-600 dark:text-gray-400">Customize your account and notification preferences</p>
-                </motion.div>
+                </div>
 
                 <div className="grid lg:grid-cols-2 gap-8">
-                  <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
+                  <div>
                     <Card className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl">
                       <CardHeader>
                         <CardTitle className="flex items-center space-x-2"><Bell className="w-5 h-5 text-primary" /><span>Notifications</span></CardTitle>
-                        <CardDescription>Control how we notify you</CardDescription>
                       </CardHeader>
-                      <CardContent className="space-y-4">
+                      <CardContent>
                         <div className="flex items-center justify-between">
                           <span>Email Notifications</span>
                           <Switch defaultChecked />
@@ -873,30 +827,29 @@ export function ClientDashboard({
                           <Switch />
                         </div>
                         <div className="pt-4 space-y-2">
-                          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                          <div>
                             <Button variant="outline" className="w-full justify-start"><Shield className="w-4 h-4 mr-2" />Privacy Settings</Button>
-                          </motion.div>
-                          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                          </div>
+                          <div>
                             <Button variant="outline" className="w-full justify-start text-red-600 hover:text-red-700"><Trash2 className="w-4 h-4 mr-2" />Delete Account</Button>
-                          </motion.div>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
-                  </motion.div>
-                  <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }}>
+                  </div>
+                  <div>
                     <Card className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl">
                       <CardHeader>
                         <CardTitle className="flex items-center space-x-2"><KeyRound className="w-5 h-5 text-primary" /><span>Security</span></CardTitle>
-                        <CardDescription>Keep your account protected</CardDescription>
                       </CardHeader>
-                      <CardContent className="space-y-3">
+                      <CardContent>
                         <Button variant="outline" className="w-full justify-between"><span>Change Password</span><KeyRound className="w-4 h-4" /></Button>
                         <Button variant="outline" className="w-full justify-between"><span>Two-Factor Authentication</span><Shield className="w-4 h-4" /></Button>
                         <Button variant="outline" className="w-full justify-between"><span>Download My Data</span><Download className="w-4 h-4" /></Button>
                         <Button variant="outline" className="w-full justify-between text-red-600 hover:text-red-700"><span>Delete Account</span><Trash2 className="w-4 h-4" /></Button>
                       </CardContent>
                     </Card>
-                  </motion.div>
+                  </div>
                 </div>
               </div>
             )}

@@ -67,7 +67,15 @@ export default function AvatarUpload({ folder = 'ugs/avatars', onUploaded, mode 
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 shadow-lg grid place-items-center text-white disabled:opacity-60"
+          className="absolute -bottom-2 -right-2 w-9 h-9 rounded-full 
+                     bg-gradient-to-br from-fuchsia-600 via-pink-600 to-rose-600 
+                     text-white grid place-items-center 
+                     shadow-[0_10px_20px_-5px_rgba(244,63,94,0.6)] 
+                     ring-2 ring-white/70 dark:ring-white/20 
+                     backdrop-blur 
+                     hover:shadow-[0_14px_28px_-6px_rgba(244,63,94,0.7)] 
+                     hover:brightness-110 transition-transform duration-200 
+                     hover:scale-105 active:scale-95 disabled:opacity-60"
           disabled={busy}
           aria-label="Change avatar"
           title="Change avatar"

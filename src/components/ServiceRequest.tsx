@@ -159,8 +159,14 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
       
       toast.success('Visa application submitted successfully!');
       toast.info('Our team will contact you within 24 hours to confirm details.');
-      
-      // Redirect to client dashboard or confirmation page
+
+      // Signal the client dashboard to open Messages for this submission
+      try {
+        sessionStorage.setItem('ugs_open_messages', '1');
+        sessionStorage.setItem('ugs_last_app_id', String(applicationId));
+      } catch {}
+
+      // Redirect to client dashboard
       onPageChange('client-dashboard');
       
     } catch (error: any) {

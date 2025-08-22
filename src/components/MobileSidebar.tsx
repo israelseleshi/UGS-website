@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import { Button } from './button';
 import { Badge } from './badge';
 import { Avatar, AvatarFallback, AvatarImage } from './avatar';
@@ -85,57 +84,47 @@ export function MobileSidebar({
   return (
     <>
       {/* Backdrop (kept for fade layering under the full-screen overlay) */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 mobile-backdrop-blur z-40 lg:hidden"
-            onClick={onClose}
-          />
-        )}
-      </AnimatePresence>
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 mobile-backdrop-blur z-40 lg:hidden"
+          onClick={onClose}
+        />
+      )}
 
       {/* Sidebar (full-screen menu) */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ x: -20, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: -20, opacity: 0 }}
-            transition={{ type: 'spring', damping: 24, stiffness: 200 }}
-            className="fixed inset-0 h-full w-full z-50 lg:hidden pointer-events-none"
-          >
-            {/* Drawer panel */}
-            <div className="pointer-events-auto absolute left-0 top-0 h-full w-[320px] sm:w-[360px] shadow-2xl ring-1 ring-black/10 dark:ring-white/10 overflow-hidden rounded-none">
-              <div className="flex flex-col h-full bg-white/95 text-gray-900 dark:bg-gray-900/95 dark:text-white mobile-backdrop-blur">
-                {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-black/10 dark:border-white/10 bg-white/80 dark:bg-gray-900/80 backdrop-blur">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-red-500 via-pink-500 to-orange-500 rounded-xl flex items-center justify-center shadow-lg ring-1 ring-white/20">
-                      <Globe className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h1 className="text-lg font-bold">
-                        {isAdmin ? 'UGS Admin' : 'UGS Client Portal'}
-                      </h1>
-                      <p className="text-xs text-gray-500 dark:text-gray-300">
-                        {isAdmin ? 'Control Center' : 'Premium Dashboard'}
-                      </p>
-                    </div>
+      {isOpen && (
+        <div
+          className="fixed inset-0 h-full w-full z-50 lg:hidden pointer-events-none"
+        >
+          {/* Drawer panel */}
+          <div className="pointer-events-auto absolute left-0 top-0 h-full w-[320px] sm:w-[360px] shadow-2xl ring-1 ring-black/10 dark:ring-white/10 overflow-hidden rounded-none">
+            <div className="flex flex-col h-full bg-white/95 text-gray-900 dark:bg-gray-900/95 dark:text-white mobile-backdrop-blur">
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 border-b border-black/10 dark:border-white/10 bg-white/80 dark:bg-gray-900/80 backdrop-blur">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-red-500 via-pink-500 to-orange-500 rounded-xl flex items-center justify-center shadow-lg ring-1 ring-white/20">
+                    <Globe className="w-6 h-6 text-white" />
                   </div>
-                  <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={onClose}
-                      className="w-9 h-9 p-0 text-gray-700 hover:bg-black/5 dark:text-white dark:hover:bg-white/10"
-                    >
-                      <X className="w-5 h-5" />
-                    </Button>
-                  </motion.div>
+                  <div>
+                    <h1 className="text-lg font-bold">
+                      {isAdmin ? 'UGS Admin' : 'UGS Client Portal'}
+                    </h1>
+                    <p className="text-xs text-gray-500 dark:text-gray-300">
+                      {isAdmin ? 'Control Center' : 'Premium Dashboard'}
+                    </p>
+                  </div>
                 </div>
+                <div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onClose}
+                    className="w-9 h-9 p-0 text-gray-700 hover:bg-black/5 dark:text-white dark:hover:bg-white/10"
+                  >
+                    <X className="w-5 h-5" />
+                  </Button>
+                </div>
+              </div>
 
               {/* User Profile Section */}
               {userData && (
@@ -143,7 +132,7 @@ export function MobileSidebar({
                   <div className="flex items-center space-x-4">
                     <Avatar className="w-12 h-12 ring-2 ring-black/10 dark:ring-white/20">
                       {userData.avatar ? (
-                        <AvatarImage src={userData.avatar} alt={userData.name} />
+                        <AvatarImage className="object-cover" src={userData.avatar} alt={userData.name} />
                       ) : null}
                       <AvatarFallback className="bg-gradient-to-r from-red-500 to-pink-500 text-white font-semibold">
                         {userData.name
@@ -181,15 +170,8 @@ export function MobileSidebar({
               {/* Navigation Tabs */}
               <div className="flex-1 overflow-y-auto py-4">
                 <div className="space-y-2 px-4">
-                  {tabs.map((tab, index) => (
-                    <motion.div
-                      key={tab.value}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
+                  {tabs.map((tab) => (
+                    <div key={tab.value}>
                       <Button
                         variant={"ghost"}
                         className={`w-full justify-start h-auto p-4 rounded-xl transition-all duration-300 mobile-touch-target border ${
@@ -221,7 +203,7 @@ export function MobileSidebar({
                           </div>
                         </div>
                       </Button>
-                    </motion.div>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -229,10 +211,7 @@ export function MobileSidebar({
               {/* Footer Actions */}
               <div className="p-4 border-t border-black/10 dark:border-white/10 space-y-2 bg-white/70 dark:bg-gray-900/70 backdrop-blur">
                 {onLogout && (
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
+                  <div>
                     <Button
                       variant="ghost"
                       className="w-full justify-start mobile-touch-target text-gray-900 hover:bg-black/5 dark:text-white dark:hover:bg-white/10"
@@ -244,16 +223,15 @@ export function MobileSidebar({
                       <LogOut className="w-5 h-5 mr-3" />
                       Sign Out
                     </Button>
-                  </motion.div>
+                  </div>
                 )}
               </div>
               </div>
             </div>
             {/* Transparent right-side area to close on click */}
             <div className="pointer-events-auto absolute left-[320px] sm:left-[360px] right-0 top-0 bottom-0" onClick={onClose} />
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
     </>
   );
 }
@@ -266,11 +244,7 @@ interface MobileMenuButtonProps {
 
 export function MobileMenuButton({ onClick, className = "" }: MobileMenuButtonProps) {
   return (
-    <motion.div
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
-      className={className}
-    >
+    <div className={className}>
       <Button
         variant="ghost"
         size="sm"
@@ -278,8 +252,8 @@ export function MobileMenuButton({ onClick, className = "" }: MobileMenuButtonPr
         className="lg:hidden w-9 h-9 p-0"
         aria-label="Open menu"
       >
-        <Menu className="w-5 h-5" />
+        <Menu className="w-6 h-6" />
       </Button>
-    </motion.div>
+    </div>
   );
 }

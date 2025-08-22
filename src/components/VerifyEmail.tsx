@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { motion } from "motion/react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./card";
 import { Button } from "./button";
 import { Input } from "./input";
@@ -66,7 +65,7 @@ export function VerifyEmail({ onPageChange }: VerifyEmailProps) {
   return (
     <div className="min-h-screen flex items-center justify-center px-6 sm:px-8 lg:px-12 py-16">
       <div className="w-full max-w-md">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <div>
           <Card className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl">
             <CardHeader>
               <CardTitle className="text-2xl">Verify your email</CardTitle>
@@ -109,7 +108,7 @@ export function VerifyEmail({ onPageChange }: VerifyEmailProps) {
               </div>
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

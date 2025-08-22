@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import { Button } from './button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card';
 import { Input } from './input';
@@ -137,26 +136,12 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
 
       {/* Left side - Form */}
       <div className="flex-1 flex items-center justify-center px-6 sm:px-8 lg:px-12 py-8 relative z-10">
-        <motion.div
-          initial={{ opacity: 0, x: -50 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6 }}
-          className="w-full max-w-md"
-        >
+        <div className="w-full max-w-md">
           {/* Logo */}
-          <motion.div 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="flex items-center space-x-3 mb-8"
-          >
-            <motion.div 
-              whileHover={{ rotate: 360 }}
-              transition={{ duration: 0.8 }}
-              className="w-12 h-12 bg-gradient-to-br from-red-500 via-pink-500 to-orange-500 rounded-2xl flex items-center justify-center shadow-xl"
-            >
+          <div className="flex items-center space-x-3 mb-8">
+            <div className="w-12 h-12 bg-gradient-to-br from-red-500 via-pink-500 to-orange-500 rounded-2xl flex items-center justify-center shadow-xl">
               <Globe className="w-7 h-7 text-white" />
-            </motion.div>
+            </div>
             <div>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
                 United Global Services
@@ -165,15 +150,11 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                 inspiring borderless thinking
               </p>
             </div>
-          </motion.div>
+          </div>
 
           <Card className="border-0 shadow-none bg-transparent backdrop-blur-0">
             <CardHeader className="px-0 pb-6">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-              >
+              <div>
                 <CardTitle className="text-4xl md:text-5xl tracking-tight bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
                   {type === 'signin' ? 'Welcome back' : 'Create your account'}
                 </CardTitle>
@@ -183,21 +164,17 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                     : 'Create your account to get started'
                   }
                 </CardDescription>
-              </motion.div>
+              </div>
             </CardHeader>
 
             <CardContent className="px-0">
               <form onSubmit={handleSubmit} className="space-y-7">
 
                 {/* Error Message */}
-                <AnimatePresence>
-                  {(loginError || authError) && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-xl p-4"
-                    >
+                {(loginError || authError) && (
+                  <div
+                    className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-xl p-4"
+                  >
                       <div className="flex items-center space-x-3">
                         <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
                         <p className="text-sm text-red-800 dark:text-red-200">{loginError || authError}</p>
@@ -211,29 +188,23 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                           </Button>
                         </div>
                       )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                  </div>
+                )}
 
-                <AnimatePresence>
-                  {infoMessage && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-4"
-                    >
+                {infoMessage && (
+                  <div
+                    className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-4"
+                  >
                       <div className="flex items-center space-x-3">
                         <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0" />
                         <p className="text-sm text-emerald-800 dark:text-emerald-200">{infoMessage}</p>
                       </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                  </div>
+                )}
 
                 {/* Core Credentials (signin only) */}
                 {type === 'signin' && (
-                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="space-y-5">
+                  <div className="space-y-5">
                     <div className="space-y-2">
                       <Label htmlFor="email" className="text-sm">Email <span className="text-red-500">*</span></Label>
                       <div className="relative">
@@ -271,16 +242,11 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                         <Button type="button" onClick={() => setForgotOpen(true)} variant="link" className="px-0 text-xs bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent">Forgot password?</Button>
                       </div>
                     </div>
-                  </motion.div>
+                  </div>
                 )}
 
                 {type === 'signup' && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 }}
-                    className="space-y-5"
-                  >
+                  <div className="space-y-5">
                     {/* Names (required) */}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
@@ -387,12 +353,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                     </div>
 
                     {/* Agreements */}
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.9 }}
-                      className="space-y-4"
-                    >
+                    <div className="space-y-4">
                       <div className="flex items-start gap-3">
                         <Checkbox 
                           id="terms" 
@@ -421,17 +382,11 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                           Send me updates and offers
                         </Label>
                       </div>
-                    </motion.div>
-                  </motion.div>
+                    </div>
+                  </div>
                 )}
 
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: type === 'signup' ? 1.0 : 0.7 }}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
+                <div>
                   <Button 
                     type="submit" 
                     className="w-full bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 shadow-lg" 
@@ -439,11 +394,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                     disabled={isLoading || authLoading}
                   >
                     {isLoading || authLoading ? (
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                        className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
-                      />
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     ) : (
                       <>
                         {type === 'signin' ? 'Sign In' : 'Create Account'}
@@ -451,18 +402,13 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                       </>
                     )}
                   </Button>
-                </motion.div>
+                </div>
 
                 {/* Removed social sign-in to enforce Gmail-only email/password + OTP flow */}
 
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: type === 'signup' ? 1.2 : 0.9 }}
-                  className="text-center text-sm text-gray-600 dark:text-gray-400"
-                >
+                <div className="text-center text-sm text-gray-600 dark:text-gray-400">
                   {type === 'signin' ? "Don't have an account? " : 'Already have an account? '}
-                  <motion.div whileHover={{ scale: 1.05 }}>
+                  <div>
                     <Button 
                       variant="link" 
                       className="px-0 text-sm h-auto p-0 bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent font-semibold"
@@ -470,12 +416,12 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                     >
                       {type === 'signin' ? 'Create an account' : 'Sign in to your account'}
                     </Button>
-                  </motion.div>
-                </motion.div>
+                  </div>
+                </div>
               </form>
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
       </div>
 
       {/* Right side removed to keep a single centered column layout */}
