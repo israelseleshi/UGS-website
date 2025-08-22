@@ -5,6 +5,8 @@ import { Header } from './components/Header';
 import { Card, CardContent, CardHeader, CardTitle } from './components/card';
 import { Button } from './components/button';
 import { ImageWithFallback } from './components/ImageWithFallback';
+import { AspectRatio } from './components/aspect-ratio';
+import { Skeleton } from './components/skeleton';
 import { 
   Plane, 
   Home, 
@@ -169,6 +171,7 @@ export default function App() {
 
   // Services page content
   const ServicesPage = () => {
+    const [imgLoaded, setImgLoaded] = useState<boolean[]>(() => Array(4).fill(false));
     const services = [
       {
         icon: Plane,
@@ -291,7 +294,7 @@ export default function App() {
                   transition={{ delay: 0.3 + index * 0.1 }}
                   className={`grid lg:grid-cols-2 gap-10 lg:gap-16 items-center ${index % 2 === 1 ? 'lg:grid-flow-col-dense' : ''}`}
                 >
-                  <div className={`space-y-5 ${index % 2 === 1 ? 'lg:col-start-2' : ''}`}>
+                  <div className={`space-y-5 order-2 lg:order-1 ${index % 2 === 1 ? 'lg:col-start-2' : ''}`}>
                     <div className="flex items-center space-x-3 mb-4">
                       <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
                         <service.icon className="w-5 h-5 text-primary" />
@@ -343,18 +346,39 @@ export default function App() {
 
                   <motion.div
                     whileHover={{ scale: 1.02 }}
-                    className={`relative ${index % 2 === 1 ? 'lg:col-start-1' : ''}`}
+                    className={`relative order-1 lg:order-2 ${index % 2 === 1 ? 'lg:col-start-1' : ''}`}
                   >
-                    <div className="relative overflow-hidden rounded-3xl shadow-2xl ring-1 ring-border/40 bg-card">
-                      <ImageWithFallback
-                        src={cldFetch(service.image, { w: 1200 })}
-                        fallbackSrc={service.image}
-                        alt={service.title}
-                        className="w-full h-80 lg:h-[420px] object-cover"
-                        loading="lazy"
-                        referrerPolicy="no-referrer"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/15 to-transparent" />
+                    {/* Decorative shapes and skeleton similar to ServiceRequest */}
+                    <div className="relative mb-2">
+                      <div className="absolute -top-3 -left-3 h-24 w-32 md:h-28 md:w-40 rounded-2xl rotate-[-6deg] bg-indigo-600/20 dark:bg-indigo-500/15 blur-[1px]" aria-hidden="true"></div>
+                      <div className="absolute -bottom-3 -right-3 h-24 w-32 md:h-28 md:w-40 rounded-2xl rotate-[8deg] bg-blue-600/20 dark:bg-blue-500/15" aria-hidden="true"></div>
+
+                      <div className="relative overflow-hidden rounded-3xl shadow-2xl ring-1 ring-border/40 bg-card">
+                        <AspectRatio ratio={16/9}>
+                          {!imgLoaded[index] && (
+                            <Skeleton className="absolute inset-0 h-full w-full" />
+                          )}
+                          <ImageWithFallback
+                            src={cldFetch(service.image, { w: 1200 })}
+                            fallbackSrc={service.image}
+                            alt={service.title}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                            referrerPolicy="no-referrer"
+                            onLoad={() => setImgLoaded(prev => {
+                              const next = prev.slice();
+                              next[index] = true;
+                              return next;
+                            })}
+                            onError={() => setImgLoaded(prev => {
+                              const next = prev.slice();
+                              next[index] = true;
+                              return next;
+                            })}
+                          />
+                        </AspectRatio>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/15 to-transparent" />
+                      </div>
                     </div>
                   </motion.div>
                 </motion.div>

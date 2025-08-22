@@ -172,7 +172,7 @@ export function ClientDashboard({
             phone,
             memberSince,
             status: user.emailVerified ? "Verified Member" : "Unverified",
-            profileImage: null,
+            profileImage: user.photoURL || (udoc as any)?.photoURL || null,
           });
         }
 
@@ -435,7 +435,8 @@ export function ClientDashboard({
             items={clientTabs as any}
             selected={selectedTab}
             onSelect={setSelectedTab}
-            collapsed={isSidebarCollapsed && !isSidebarHovered}
+            userData={{ name: clientData.name, email: clientData.email, status: clientData.status, avatar: clientData.profileImage || undefined }}
+            collapsed={isSidebarCollapsed}
             onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           />
         </div>
@@ -445,7 +446,14 @@ export function ClientDashboard({
         <div className="grid grid-cols-12 gap-6">
           {/* Hide legacy sidebar column on lg to avoid duplicate */}
           <div className="col-span-12 lg:hidden">
-            <DesktopSidebar items={clientTabs as any} selected={selectedTab} onSelect={setSelectedTab} collapsed={isSidebarCollapsed} onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
+            <DesktopSidebar 
+              items={clientTabs as any} 
+              selected={selectedTab} 
+              onSelect={setSelectedTab} 
+              userData={{ name: clientData.name, email: clientData.email, status: clientData.status, avatar: clientData.profileImage || undefined }}
+              collapsed={isSidebarCollapsed} 
+              onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} 
+            />
           </div>
           {/* Note: content padding depends only on base collapsed state to avoid shifting on hover */}
           <div className={`col-span-12 lg:col-span-12 ${isSidebarCollapsed ? 'lg:pl-16' : 'lg:pl-64'}`}>
@@ -942,7 +950,16 @@ export function ClientDashboard({
         </div>
       </div>
 
-      <MobileSidebar isOpen={mobileSidebarOpen} onClose={() => setMobileSidebarOpen(false)} onTabChange={setSelectedTab} selectedTab={selectedTab} tabs={clientTabs} userData={{ name: clientData.name, email: clientData.email, status: clientData.status }} isAdmin={false} onLogout={onLogout} />
+      <MobileSidebar 
+        isOpen={mobileSidebarOpen} 
+        onClose={() => setMobileSidebarOpen(false)} 
+        onTabChange={setSelectedTab} 
+        selectedTab={selectedTab} 
+        tabs={clientTabs} 
+        userData={{ name: clientData.name, email: clientData.email, status: clientData.status, avatar: clientData.profileImage || undefined }} 
+        isAdmin={false} 
+        onLogout={onLogout} 
+      />
     </div>
   );
 }

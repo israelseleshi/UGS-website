@@ -2,7 +2,8 @@ import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Button } from './button';
 import { Badge } from './badge';
-import { Avatar, AvatarFallback } from './avatar';
+import { Avatar, AvatarFallback, AvatarImage } from './avatar';
+
 import { 
   X, 
   Menu, 
@@ -142,6 +143,9 @@ export function MobileSidebar({
                 <div className="p-6 border-b border-white/20 dark:border-gray-800/20">
                   <div className="flex items-center space-x-4">
                     <Avatar className="w-12 h-12 ring-2 ring-gradient-to-r from-red-500 to-pink-500">
+                      {userData.avatar ? (
+                        <AvatarImage src={userData.avatar} alt={userData.name} />
+                      ) : null}
                       <AvatarFallback className="bg-gradient-to-r from-red-500 to-pink-500 text-white font-semibold">
                         {userData.name
                           .split(" ")

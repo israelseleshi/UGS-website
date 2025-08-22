@@ -9,6 +9,7 @@ import { Checkbox } from './checkbox';
 import { RadioGroup, RadioGroupItem } from './radio-group';
 import { Progress } from './progress';
 import { Badge } from './badge';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './dialog';
 import { 
   FileText, 
   User, 
@@ -356,7 +357,7 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
               <div className="space-y-2">
                 <Label htmlFor="firstName">First Name</Label>
                 <div className="relative">
-                  <User className="w-4 h-4 absolute left-3 top-3.5 text-muted-foreground" />
+                  <User className="w-4 h-4 absolute left-3 top-3.5 text-red-600" />
                   <Input
                     id="firstName"
                     placeholder="John"
@@ -387,7 +388,7 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
               <div className="space-y-2">
                 <Label htmlFor="email">Email Address</Label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 absolute left-3 top-3.5 text-muted-foreground" />
+                  <Mail className="w-4 h-4 absolute left-3 top-3.5 text-red-600" />
                   <Input
                     id="email"
                     type="email"
@@ -402,7 +403,7 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone Number</Label>
                 <div className="relative">
-                  <Phone className="w-4 h-4 absolute left-3 top-3.5 text-muted-foreground" />
+                  <Phone className="w-4 h-4 absolute left-3 top-3.5 text-red-600" />
                   <Input
                     id="phone"
                     type="tel"
@@ -419,7 +420,7 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
               <div className="space-y-2">
                 <Label htmlFor="dateOfBirth">Date of Birth</Label>
                 <div className="relative">
-                  <Calendar className="w-4 h-4 absolute left-3 top-3.5 text-muted-foreground" />
+                  <Calendar className="w-4 h-4 absolute left-3 top-3.5 text-red-600" />
                   <Input
                     id="dateOfBirth"
                     type="date"
@@ -453,7 +454,7 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
               <div className="space-y-2">
                 <Label htmlFor="passportNumber">Passport Number</Label>
                 <div className="relative">
-                  <FileText className="w-4 h-4 absolute left-3 top-3.5 text-muted-foreground" />
+                  <FileText className="w-4 h-4 absolute left-3 top-3.5 text-red-600" />
                   <Input
                     id="passportNumber"
                     placeholder="A12345678"
@@ -494,7 +495,7 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
               <div className="space-y-2">
                 <Label htmlFor="destinationCountry">Destination Country</Label>
                 <div className="relative">
-                  <MapPin className="w-4 h-4 absolute left-3 top-3.5 text-muted-foreground" />
+                  <MapPin className="w-4 h-4 absolute left-3 top-3.5 text-red-600" />
                   <Select onValueChange={(value) => handleInputChange('destinationCountry', value)}>
                     <SelectTrigger className="pl-10">
                       <SelectValue placeholder="Select destination" />
@@ -535,7 +536,7 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
               <div className="space-y-2">
                 <Label htmlFor="travelDate">Intended Travel Date</Label>
                 <div className="relative">
-                  <Plane className="w-4 h-4 absolute left-3 top-3.5 text-muted-foreground" />
+                  <Plane className="w-4 h-4 absolute left-3 top-3.5 text-red-600" />
                   <Input
                     id="travelDate"
                     type="date"
@@ -549,7 +550,7 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
               <div className="space-y-2">
                 <Label htmlFor="returnDate">Return Date (if applicable)</Label>
                 <div className="relative">
-                  <Plane className="w-4 h-4 absolute left-3 top-3.5 text-muted-foreground rotate-180" />
+                  <Plane className="w-4 h-4 absolute left-3 top-3.5 text-red-600 rotate-180" />
                   <Input
                     id="returnDate"
                     type="date"
@@ -758,7 +759,24 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
                   required
                 />
                 <Label htmlFor="terms" className="text-sm leading-relaxed">
-                  I agree to UGS's Terms of Service and understand that visa approval is not guaranteed.
+                  I agree to UGS's
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <button type="button" className="mx-1 text-red-600 underline underline-offset-2">Terms of Service</button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Terms of Service</DialogTitle>
+                        <DialogDescription>Review the agreement before continuing.</DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-3 text-sm max-h-[60vh] overflow-y-auto">
+                        <p>By submitting this application, you authorize UGS to process your personal data and act on your behalf for the selected service.</p>
+                        <p>UGS is not responsible for consular decisions. Processing times and outcomes are determined by the respective embassy/consulate.</p>
+                        <p>Service fees are for advisory and processing assistance and are non-refundable once processing begins.</p>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                  and understand that visa approval is not guaranteed.
                 </Label>
               </div>
               <div className="flex items-start space-x-3">
@@ -769,7 +787,23 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
                   required
                 />
                 <Label htmlFor="privacy" className="text-sm leading-relaxed">
-                  I consent to the processing of my personal data for visa application purposes and agree to the Privacy Policy.
+                  I consent to the processing of my personal data and agree to the
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <button type="button" className="mx-1 text-red-600 underline underline-offset-2">Privacy Policy</button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Privacy Policy</DialogTitle>
+                        <DialogDescription>How we collect, use, and protect your data.</DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-3 text-sm max-h-[60vh] overflow-y-auto">
+                        <p>Your information is used solely for processing your application and communicating updates.</p>
+                        <p>We implement industry-standard security to safeguard your data and only share with authorities as required.</p>
+                        <p>You may request deletion of your data subject to legal and regulatory requirements.</p>
+                      </div>
+                    </DialogContent>
+                  </Dialog>.
                 </Label>
               </div>
             </div>

@@ -688,14 +688,22 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
 
       {/* VisaEd: View Registration Dialog */}
       <Dialog open={regViewOpen} onOpenChange={setRegViewOpen}>
-        <DialogContent className="w-[100vw] max-w-[100vw] sm:max-w-2xl rounded-none sm:rounded-2xl p-0 overflow-hidden">
+        <DialogContent className="w-[100vw] max-w-[100vw] sm:max-w-2xl rounded-none sm:rounded-2xl p-0 overflow-hidden flex flex-col h-[95vh] sm:h-auto">
           <DialogHeader className="relative bg-gradient-to-r from-red-500 to-pink-500 text-white p-5">
+            <button
+              type="button"
+              onClick={() => setRegViewOpen(false)}
+              aria-label="Close enrollment details"
+              className="absolute left-3 top-3 p-1 rounded-md text-white/90 hover:text-white hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/30"
+            >
+              <X className="w-4 h-4" />
+            </button>
             <DialogTitle className="text-white flex items-center gap-2">
               <GraduationCap className="w-5 h-5" /> Enrollment Details
             </DialogTitle>
             <DialogDescription className="text-white/80">VisaEd registration overview</DialogDescription>
           </DialogHeader>
-          <div className="p-5 space-y-6 text-sm">
+          <div className="p-5 space-y-6 text-sm overflow-y-auto overflow-x-hidden flex-1">
             {!selectedReg ? (
               <div className="text-muted-foreground">No registration selected.</div>
             ) : (

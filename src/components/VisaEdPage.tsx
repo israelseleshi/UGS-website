@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Textarea } from './textarea';
 import { Checkbox } from './checkbox';
 import { RadioGroup, RadioGroupItem } from './radio-group';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from './dialog';
 import { ImageWithFallback } from './ImageWithFallback';
 import { 
   GraduationCap, 
@@ -335,14 +336,14 @@ export function VisaEdPage({ onPageChange }: VisaEdPageProps) {
                     <div className="space-y-2">
                       <Label htmlFor="firstName">First Name</Label>
                       <div className="relative">
-                        <User className="w-4 h-4 absolute left-3 top-3.5 text-muted-foreground" />
+                        <User className="w-4 h-4 absolute left-3 top-3.5 text-red-600" />
                         <Input id="firstName" placeholder="John" className="pl-10" value={registrationData.firstName} onChange={(e) => handleInputChange('firstName', e.target.value)} required />
                       </div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="lastName">Last Name</Label>
                       <div className="relative">
-                        <User className="w-4 h-4 absolute left-3 top-3.5 text-muted-foreground" />
+                        <User className="w-4 h-4 absolute left-3 top-3.5 text-red-600" />
                         <Input id="lastName" placeholder="Doe" className="pl-10" value={registrationData.lastName} onChange={(e) => handleInputChange('lastName', e.target.value)} required />
                       </div>
                     </div>
@@ -352,14 +353,14 @@ export function VisaEdPage({ onPageChange }: VisaEdPageProps) {
                     <div className="space-y-2">
                       <Label htmlFor="email">Email Address</Label>
                       <div className="relative">
-                        <Mail className="w-4 h-4 absolute left-3 top-3.5 text-muted-foreground" />
+                        <Mail className="w-4 h-4 absolute left-3 top-3.5 text-red-600" />
                         <Input id="email" type="email" placeholder="john@example.com" className="pl-10" value={registrationData.email} onChange={(e) => handleInputChange('email', e.target.value)} required />
                       </div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="phone">Phone Number</Label>
                       <div className="relative">
-                        <Phone className="w-4 h-4 absolute left-3 top-3.5 text-muted-foreground" />
+                        <Phone className="w-4 h-4 absolute left-3 top-3.5 text-red-600" />
                         <Input id="phone" type="tel" placeholder="+1 (555) 000-0000" className="pl-10" value={registrationData.phone} onChange={(e) => handleInputChange('phone', e.target.value)} />
                       </div>
                     </div>
@@ -461,9 +462,47 @@ export function VisaEdPage({ onPageChange }: VisaEdPageProps) {
 
                   <div className="flex items-start space-x-3">
                     <Checkbox id="terms" checked={registrationData.agreeToTerms} onCheckedChange={(checked) => handleInputChange('agreeToTerms', checked as boolean)} required />
-                    <Label htmlFor="terms" className="text-sm leading-relaxed">
-                      I agree to VisaEd's Terms of Service and Privacy Policy. I consent to receiving educational materials and course updates via email.
-                    </Label>
+                    <div className="text-sm leading-relaxed text-muted-foreground">
+                      I agree to VisaEd's 
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <button type="button" className="font-medium text-red-600 hover:underline ml-1">Terms of Service</button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-2xl">
+                          <DialogHeader>
+                            <DialogTitle>VisaEd Terms of Service</DialogTitle>
+                            <DialogDescription>Last updated: Today</DialogDescription>
+                          </DialogHeader>
+                          <div className="prose dark:prose-invert max-h-[60vh] overflow-y-auto text-sm">
+                            <p>Welcome to VisaEd. By using our services, you agree to the following terms...</p>
+                            <ul className="list-disc pl-5 space-y-1">
+                              <li>Use of the platform for educational purposes only.</li>
+                              <li>No guarantee of visa approval; we provide guidance and education.</li>
+                              <li>Respect intellectual property and community rules.</li>
+                            </ul>
+                            <p>Contact support for questions about these terms.</p>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                      and 
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <button type="button" className="font-medium text-red-600 hover:underline">Privacy Policy</button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-2xl">
+                          <DialogHeader>
+                            <DialogTitle>VisaEd Privacy Policy</DialogTitle>
+                            <DialogDescription>How we handle your data</DialogDescription>
+                          </DialogHeader>
+                          <div className="prose dark:prose-invert max-h-[60vh] overflow-y-auto text-sm">
+                            <p>We collect basic information to provide learning services, such as name, email, and preferences.</p>
+                            <p>Your data is never sold and is processed according to applicable laws. You can request deletion at any time.</p>
+                            <p>For details, contact privacy@visaed.example.</p>
+                          </div>
+                        </DialogContent>
+                      </Dialog>.
+                      I consent to receiving educational materials and course updates via email.
+                    </div>
                   </div>
 
                   <Button type="submit" size="lg" disabled={submitting} className="w-full bg-red-600 hover:bg-red-700 text-white">

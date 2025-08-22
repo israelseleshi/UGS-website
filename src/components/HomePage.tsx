@@ -64,11 +64,11 @@ export function HomePage({ onPageChange }: HomePageProps) {
   return (
   <div className="min-h-screen bg-hero-diagonal relative no-hscroll">
       {/* Hero Section */}
-      <section className="relative min-h-[calc(100vh-5rem)] py-12 md:py-24 flex items-center overflow-hidden">
+      <section className="relative min-h-[calc(100vh-5rem)] py-10 md:py-24 flex items-center overflow-hidden">
         {/* layered subtle gradients */}
         <div className="pointer-events-none absolute inset-0 bg-hero-radial" />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-transparent dark:from-primary/20 dark:via-background dark:to-transparent" />
-        <div className="pointer-events-none absolute -right-40 top-1/3 h-[600px] w-[600px] rounded-full bg-gradient-to-tr from-primary/20 to-transparent blur-3xl opacity-50 dark:opacity-40" />
+        <div className="pointer-events-none absolute -right-28 top-1/3 h-[320px] w-[320px] md:h-[520px] md:w-[520px] rounded-full bg-gradient-to-tr from-primary/20 to-transparent blur-3xl opacity-50 dark:opacity-40" />
         <div className="relative z-10 site-container site-max">
           <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
             <div className="space-y-8">
@@ -124,12 +124,12 @@ export function HomePage({ onPageChange }: HomePageProps) {
 
             <div className="relative">
               {/* Decorative rotated panels behind card */}
-              <div className="pointer-events-none absolute left-1/2 top-8 z-10 h-[440px] w-[480px] lg:h-[520px] lg:w-[560px] -translate-x-1/2 -rotate-6 rounded-3xl bg-gradient-to-br from-primary/30 to-red-700/25 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)] ring-1 ring-primary/20 dark:from-primary/25 dark:to-red-900/25" />
-              <div className="pointer-events-none absolute left-1/2 top-16 z-0 h-[440px] w-[480px] lg:h-[520px] lg:w-[560px] -translate-x-1/2 -rotate-12 rounded-3xl bg-gradient-to-tr from-primary/10 via-background/40 to-transparent blur-xl" />
+              <div className="pointer-events-none absolute left-1/2 top-4 md:top-8 z-10 h-[320px] w-[360px] md:h-[440px] md:w-[480px] lg:h-[520px] lg:w-[560px] -translate-x-1/2 -rotate-6 rounded-3xl bg-gradient-to-br from-primary/30 to-red-700/25 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)] ring-1 ring-primary/20 dark:from-primary/25 dark:to-red-900/25" />
+              <div className="pointer-events-none absolute left-1/2 top-10 md:top-16 z-0 h-[320px] w-[360px] md:h-[440px] md:w-[480px] lg:h-[520px] lg:w-[560px] -translate-x-1/2 -rotate-12 rounded-3xl bg-gradient-to-tr from-primary/10 via-background/40 to-transparent blur-xl" />
 
               <div className="relative z-20 mx-auto w-full max-w-lg lg:max-w-xl animate-scale-in">
                 <div className="group relative rounded-[2.25rem] bg-gradient-to-b from-foreground/[0.08] to-foreground/[0.04] p-[2px] shadow-xl ring-1 ring-border/40 backdrop-blur-sm supports-[backdrop-filter]:bg-foreground/5">
-                  <div className="rounded-[2rem] bg-card/95 supports-[backdrop-filter]:bg-card/90 px-8 pt-8 pb-10">
+                  <div className="rounded-[2rem] bg-card/95 supports-[backdrop-filter]:bg-card/90 px-5 md:px-8 pt-6 md:pt-8 pb-8 md:pb-10">
                     <div className="relative overflow-hidden rounded-2xl ring-1 ring-border/20 shadow-inner">
                       <ImageWithFallback
                         src="https://images.unsplash.com/photo-1721138942121-a26751b520b5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwYXNzcG9ydCUyMHRyYXZlbCUyMHZpc2ElMjBkb2N1bWVudHN8ZW58MXx8fHwxNzU1NTk2NjAxfDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
