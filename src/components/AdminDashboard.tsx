@@ -4,30 +4,15 @@ import { getTheme as readTheme, toggleTheme as flipTheme, type AppTheme } from '
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card';
 import { Button } from './button';
 import { Badge } from './badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs';
-import { Popover, PopoverContent, PopoverTrigger } from './popover';
-import { listAllApplications, getVisaApplication, updateVisaApplication, sendApplicationMessage, subscribeApplicationMessages, listVisaEdRegistrations, ensureBaseCollections, type VisaApplication, type AppMessage, type VisaEdRegistration } from '../lib/db';
+// Removed Tabs UI in favor of sidebar-driven conditional rendering
+// import { Popover, PopoverContent, PopoverTrigger } from './popover';
+import { listAllApplications, getVisaApplication, updateVisaApplication, sendDirectMessage, subscribeDirectMessages, listVisaEdRegistrations, ensureBaseCollections, type VisaApplication, type VisaEdRegistration } from '../lib/db';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from './avatar';
-import { Progress } from './progress';
+// import { Progress } from './progress';
 import { MobileSidebar, MobileMenuButton } from './MobileSidebar';
 import { useIsMobile } from './use-mobile';
 import ChatPanel, { type ChatMessage as UiChatMessage } from './ChatPanel';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  Cell,
-  Legend
-} from 'recharts';
 import {
   Users,
   FileText,
@@ -112,14 +97,10 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
   }, [selectedChatUserId, chatUsers]);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [detailsLoading, setDetailsLoading] = useState(false);
-  // Keep unsubscribe handle for messages
-  const messagesUnsub = React.useRef<undefined | (() => void)>(undefined);
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
   const [selectedApp, setSelectedApp] = useState<(VisaApplication & { id: string }) | null>(null);
   const { user } = useAuth();
-  const [messages, setMessages] = useState<(AppMessage & { id: string })[]>([]);
-  const [messagesLoading, setMessagesLoading] = useState(false);
-  const [newMessage, setNewMessage] = useState('');
+  
   // VisaEd state
   const [visaEdRegs, setVisaEdRegs] = useState<(VisaEdRegistration & { id: string })[]>([]);
   const [visaEdLoading, setVisaEdLoading] = useState(true);
@@ -157,7 +138,19 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
         }
         setVisaEdLoading(true);
         const { items } = await listVisaEdRegistrations(100);
-        if (!ignore) setVisaEdRegs(items as any);
+        const filtered = (items || []).filter((it: any) => {
+          if (!it) return false;
+          const id = (it as any).id as string | undefined;
+          const type = (it as any)._type as string | undefined;
+          const email = (it as any).userEmail as string | undefined;
+          const uid = (it as any).uid as string | undefined;
+          if (id === '_seed') return false;
+          if (type === 'seed') return false;
+          if (email && /(^|[._-])seed($|@|\.)/i.test(email)) return false;
+          if (uid === '_seed') return false;
+          return true;
+        });
+        if (!ignore) setVisaEdRegs(filtered as any);
       } catch (e) {
         console.error('Failed to load VisaEd registrations', e);
       } finally {
@@ -168,17 +161,7 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
     return () => { ignore = true; };
   }, []);
 
-  React.useEffect(() => {
-    if (!detailsOpen) {
-      // Cleanup when dialog closes
-      messagesUnsub.current?.();
-      messagesUnsub.current = undefined;
-    }
-    return () => {
-      messagesUnsub.current?.();
-      messagesUnsub.current = undefined;
-    };
-  }, [detailsOpen]);
+  
 
   async function openDetails(id: string) {
     try {
@@ -187,18 +170,6 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
       setDetailsLoading(true);
       const app = await getVisaApplication(id);
       setSelectedApp((app as any) || null);
-      // Subscribe to messages in real-time
-      try {
-        setMessagesLoading(true);
-        messagesUnsub.current?.();
-        messagesUnsub.current = subscribeApplicationMessages(id, (items) => {
-          setMessages(items as any);
-        });
-      } catch (e) {
-        setMessages([]);
-      } finally {
-        setMessagesLoading(false);
-      }
     } catch (e: any) {
       toast.error(e?.message || 'Failed to fetch application details');
     } finally {
@@ -206,16 +177,7 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
     }
   }
 
-  async function sendMsg() {
-    if (!selectedAppId || !user || !newMessage.trim()) return;
-    try {
-      const sent = await sendApplicationMessage(selectedAppId, { text: newMessage.trim(), byUid: user.uid, byRole: 'admin' });
-      setMessages(prev => [...prev, { id: (sent as any).id, ...(sent as any) }]);
-      setNewMessage('');
-    } catch (e: any) {
-      toast.error(e?.message || 'Failed to send message');
-    }
-  }
+  
 
   async function updateSelectedStatus(newStatus: 'submitted' | 'in_review' | 'approved' | 'rejected') {
     if (!selectedAppId) return;
@@ -240,9 +202,19 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
         }
         setLoading(true);
         const { items } = await listAllApplications(50);
-        if (!ignore) {
-          setApplications(items);
-        }
+        const filtered = (items || []).filter((it: any) => {
+          if (!it) return false;
+          const id = (it as any).id as string | undefined;
+          const type = (it as any)._type as string | undefined;
+          const email = (it as any).userEmail as string | undefined;
+          const uid = (it as any).uid as string | undefined;
+          if (id === '_seed') return false;
+          if (type === 'seed') return false;
+          if (email && /(^|[._-])seed($|@|\.)/i.test(email)) return false;
+          if (uid === '_seed') return false;
+          return true;
+        });
+        if (!ignore) setApplications(filtered as any);
       } catch (error) {
         console.error('Error loading applications:', error);
         if (!ignore) {
@@ -265,32 +237,25 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
   const successRate = totalApplications > 0 ? ((approvedApplications / totalApplications) * 100).toFixed(1) : '0';
   const uniqueUsers = new Set(applications.map(app => app.uid)).size;
 
-  // Helper: get primary application ID for a chat user identifier
-  const getAppIdForUser = React.useCallback((id: string | null) => {
+  // Helper: resolve userId (uid) for a conversation entry
+  const getUserIdForChat = React.useCallback((id: string | null) => {
     if (!id) return null;
-    const matches = applications.filter(a => a.uid === id || a.userEmail === id || a.id === id);
-    if (matches.length === 0) return null;
-    // Pick the most recent by createdAt
-    const sorted = matches.slice().sort((a, b) => {
-      const ta = (a.createdAt && (a.createdAt.toDate?.() as any)) ? a.createdAt.toDate().getTime() : 0;
-      const tb = (b.createdAt && (b.createdAt.toDate?.() as any)) ? b.createdAt.toDate().getTime() : 0;
-      return tb - ta;
-    });
-    return sorted[0].id;
+    const match = applications.find(a => a.uid === id) || applications.find(a => a.userEmail === id) || applications.find(a => a.id === id);
+    return match?.uid || null;
   }, [applications]);
 
-  // Subscribe to messages for the active chat user
+  // Subscribe to direct messages for the active chat user (top-level messages collection)
   React.useEffect(() => {
     chatMessagesUnsub.current?.();
     chatMessagesUnsub.current = undefined;
     const activeId = selectedChatUserId || chatUsers[0]?.id || null;
-    const appId = getAppIdForUser(activeId);
-    if (!appId) {
+    const userId = getUserIdForChat(activeId);
+    if (!userId) {
       setChatByUser(prev => ({ ...prev, [activeId as string]: [] }));
       return;
     }
     try {
-      chatMessagesUnsub.current = subscribeApplicationMessages(appId, (items) => {
+      chatMessagesUnsub.current = subscribeDirectMessages(userId, (items) => {
         const mapped: UiChatMessage[] = items.map(it => ({ id: it.id, text: it.text, by: it.byRole === 'admin' ? 'admin' : 'user', at: undefined }));
         setChatByUser(prev => ({ ...prev, [activeId as string]: mapped }));
       });
@@ -301,58 +266,13 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
       chatMessagesUnsub.current?.();
       chatMessagesUnsub.current = undefined;
     };
-  }, [selectedChatUserId, chatUsers, getAppIdForUser]);
+  }, [selectedChatUserId, chatUsers, getUserIdForChat]);
 
   const overviewStats = [
-    { title: 'Total Applications', value: totalApplications.toString(), change: '+12%', icon: FileText, color: 'text-blue-600' },
-    { title: 'Active Users', value: uniqueUsers.toString(), change: '+8%', icon: Users, color: 'text-green-600' },
-    { title: 'Revenue (Est.)', value: `ETB ${totalRevenue.toLocaleString()}`, change: '+23%', icon: DollarSign, color: 'text-purple-600' },
-    { title: 'Success Rate', value: `${successRate}%`, change: '+2.1%', icon: CheckCircle, color: 'text-emerald-600' }
-  ];
-
-  // Calculate service stats from real data
-  const serviceStats = [
-    {
-      name: 'Tourism & Leisure',
-      applications: applications.filter(app => app.travel?.serviceType === 'tourist').length,
-      revenue: applications.filter(app => app.travel?.serviceType === 'tourist').reduce((sum, app) => sum + (app.estimatedCost || 0), 0),
-      success: 97.8,
-      icon: Plane,
-      color: '#3b82f6'
-    },
-    {
-      name: 'Immigration',
-      applications: applications.filter(app => app.travel?.serviceType === 'immigration').length,
-      revenue: applications.filter(app => app.travel?.serviceType === 'immigration').reduce((sum, app) => sum + (app.estimatedCost || 0), 0),
-      success: 98.9,
-      icon: Home,
-      color: '#10b981'
-    },
-    {
-      name: 'Business',
-      applications: applications.filter(app => app.travel?.serviceType === 'business').length,
-      revenue: applications.filter(app => app.travel?.serviceType === 'business').reduce((sum, app) => sum + (app.estimatedCost || 0), 0),
-      success: 99.1,
-      icon: Building,
-      color: '#f59e0b'
-    },
-    {
-      name: 'Education',
-      applications: applications.filter(app => app.travel?.serviceType === 'student').length,
-      revenue: applications.filter(app => app.travel?.serviceType === 'student').reduce((sum, app) => sum + (app.estimatedCost || 0), 0),
-      success: 97.2,
-      icon: GraduationCap,
-      color: '#8b5cf6'
-    }
-  ];
-
-  const monthlyData = [
-    { month: 'Jan', applications: 890, revenue: 23400 },
-    { month: 'Feb', applications: 1250, revenue: 31200 },
-    { month: 'Mar', applications: 1480, revenue: 42800 },
-    { month: 'Apr', applications: 1320, revenue: 38900 },
-    { month: 'May', applications: 1680, revenue: 48300 },
-    { month: 'Jun', applications: 1920, revenue: 52100 }
+    { title: 'Total Applications', value: totalApplications.toString(), icon: FileText, color: 'text-blue-600' },
+    { title: 'Active Users', value: uniqueUsers.toString(), icon: Users, color: 'text-green-600' },
+    { title: 'Revenue (Est.)', value: `ETB ${totalRevenue.toLocaleString()}`, icon: DollarSign, color: 'text-purple-600' },
+    { title: 'Success Rate', value: `${successRate}%`, icon: CheckCircle, color: 'text-emerald-600' }
   ];
 
   // Transform Firebase applications to display format
@@ -389,20 +309,6 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
     }
   }
 
-  const visaEdStats = [
-    { course: 'Tourist Visa Fundamentals', enrolled: 1240, completed: 980, rating: 4.8 },
-    { course: 'Student Visa Mastery', enrolled: 890, completed: 650, rating: 4.9 },
-    { course: 'Immigration Law Basics', enrolled: 560, completed: 420, rating: 4.7 },
-    { course: 'Business Visa Guide', enrolled: 340, completed: 280, rating: 4.6 }
-  ];
-
-  const allenInteractions = [
-    { date: '2024-01-15', queries: 450, satisfaction: 4.6, resolved: 89 },
-    { date: '2024-01-14', queries: 520, satisfaction: 4.5, resolved: 91 },
-    { date: '2024-01-13', queries: 380, satisfaction: 4.7, resolved: 88 },
-    { date: '2024-01-12', queries: 490, satisfaction: 4.4, resolved: 85 },
-    { date: '2024-01-11', queries: 410, satisfaction: 4.8, resolved: 93 }
-  ];
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -414,7 +320,7 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
     }
   };
 
-  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
+  // Removed mock colors and datasets used by charts
 
   // Convert ISO region codes to full country names (falls back gracefully)
   const toCountryName = (code?: string) => {
@@ -449,36 +355,33 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
 
   // Admin tabs configuration
   const adminTabs = [
-    { value: 'overview', label: 'Overview', icon: BarChart3, description: 'Dashboard overview and analytics' },
-    { value: 'applications', label: 'Applications', icon: FileText, badge: applications.length.toString(), description: 'Manage visa applications' },
-    { value: 'users', label: 'Users', icon: Users, description: 'User management and profiles' },
-    { value: 'visaed', label: 'VisaEd', icon: GraduationCap, description: 'Educational content management' },
-    { value: 'allen', label: 'Allen AI', icon: Bot, description: 'AI assistant analytics' },
-    { value: 'messages', label: 'Messages', icon: MessageSquare, description: 'Chat with clients (UI only)' },
-    { value: 'analytics', label: 'Analytics', icon: BarChart3, description: 'Advanced analytics and reports' }
+    { value: 'overview', label: 'Overview', icon: BarChart3 },
+    { value: 'applications', label: 'Applications', icon: FileText, badge: applications.length.toString() },
+    { value: 'users', label: 'Users', icon: Users },
+    { value: 'visaed', label: 'VisaEd', icon: GraduationCap },
+    { value: 'allen', label: 'Allen AI', icon: Bot },
+    { value: 'messages', label: 'Messages', icon: MessageSquare },
+    { value: 'analytics', label: 'Analytics', icon: BarChart3 }
   ];
 
   return (
     <div className="min-h-screen bg-background no-hscroll admin-strong-borders">
       {/* Header */}
-      <div className="border-b border-border bg-card">
+      <div className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 dark:bg-gray-950/80 border-b border-white/20 dark:border-gray-800/50">
         <div className="site-container">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between h-20">
             <div className="flex items-center space-x-4">
               <MobileMenuButton onClick={() => setMobileSidebarOpen(true)} />
-              {/* Desktop Hamburger Icon */}
+              {/* Desktop sidebar toggle */}
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                className="hidden md:inline-flex" // Show only on medium screens and up
+                onClick={() => setIsSidebarCollapsed(v => !v)}
+                className="hidden lg:inline-flex"
                 aria-label="Toggle sidebar"
+                title="Toggle sidebar"
               >
-                {isSidebarCollapsed ? (
-                  <X className="w-5 h-5" />
-                ) : (
-                  <Menu className="w-5 h-5" />
-                )}
+                <Menu className="w-5 h-5" />
               </Button>
               <div className="flex items-center space-x-3">
                 <div className="w-8 h-8 bg-gradient-to-br from-primary to-red-600 rounded-lg flex items-center justify-center">
@@ -623,34 +526,22 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                   </div>
                 </div>
 
-                {/* Messages */}
+                {/* Messages moved to Messages tab */}
                 <div className="space-y-3">
                   <p className="text-sm font-medium flex items-center"><MessageSquare className="w-4 h-4 mr-2" /> Messages</p>
-                  <div className="border rounded-lg p-3 max-h-56 overflow-y-auto bg-muted/30">
-                    {messagesLoading ? (
-                      <div className="text-xs text-muted-foreground">Loading messages…</div>
-                    ) : messages.length === 0 ? (
-                      <div className="text-xs text-muted-foreground">No messages yet. Start the conversation.</div>
-                    ) : (
-                      <div className="space-y-2">
-                        {messages.map((m) => (
-                          <div key={m.id} className={`text-sm p-2 rounded-md ${m.byRole === 'admin' ? 'bg-blue-500/10' : 'bg-gray-500/10'}`}>
-                            <div className="text-xs text-muted-foreground mb-1">{m.byRole === 'admin' ? 'Admin' : 'Client'}</div>
-                            <div>{m.text}</div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <input
-                      value={newMessage}
-                      onChange={e => setNewMessage(e.target.value)}
-                      placeholder="Type a message…"
-                      className="flex-1 bg-transparent border border-border rounded-md px-3 py-2 text-sm"
-                    />
-                    <Button size="sm" onClick={sendMsg} className="bg-gradient-to-r from-red-500 to-pink-500 text-white">
-                      <Send className="w-4 h-4 mr-1" /> Send
+                  <div className="border rounded-lg p-4 bg-muted/20 flex items-center justify-between">
+                    <p className="text-xs sm:text-sm text-muted-foreground">Conversations are managed in the Messages tab.</p>
+                    <Button
+                      size="sm"
+                      className="bg-gradient-to-r from-red-500 to-pink-500 text-white"
+                      onClick={() => {
+                        const targetUserId = (selectedApp?.uid || selectedApp?.userEmail || selectedAppId) as string;
+                        setSelectedTab('messages');
+                        if (targetUserId) setSelectedChatUserId(targetUserId);
+                        setDetailsOpen(false);
+                      }}
+                    >
+                      Open Conversation
                     </Button>
                   </div>
                 </div>
@@ -888,19 +779,22 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
       </Dialog>
 
       {/* Main Content */}
-      {/* Fixed left desktop sidebar; expands on hover when collapsed (Gemini-like) */}
+      {/* Fixed left desktop sidebar; full height with collapse/expand */}
       <div
-        className="hidden lg:block fixed left-0 top-16 z-30 h-[calc(100vh-4rem)] py-2"
+        className="hidden lg:flex fixed left-0 top-20 bottom-0 z-30 items-stretch"
         onMouseEnter={() => setIsSidebarHovered(true)}
         onMouseLeave={() => setIsSidebarHovered(false)}
       >
-        <div className={`${(isSidebarCollapsed && !isSidebarHovered) ? 'w-16' : 'w-64'} h-full px-2`}>
+        <div
+          className={`${(isSidebarCollapsed && !isSidebarHovered) ? 'w-16' : 'w-64'} h-full transition-all duration-300`}
+        >
           <DesktopSidebar
             items={adminTabs as any}
             selected={selectedTab}
             onSelect={setSelectedTab}
             collapsed={isSidebarCollapsed && !isSidebarHovered}
-            onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            onToggleCollapse={() => setIsSidebarCollapsed(v => !v)}
+            onLogout={onLogout}
           />
         </div>
       </div>
@@ -909,21 +803,12 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
         {/* Admin quick actions removed per request */}
         {/* Desktop: content shifts right to accommodate fixed sidebar */}
         <div className="grid grid-cols-12 gap-4 md:gap-6">
-          {/* Hide legacy sidebar column on lg to avoid duplicate */}
-          <div className="col-span-12 lg:hidden">
-            <DesktopSidebar
-              items={adminTabs as any}
-              selected={selectedTab}
-              onSelect={setSelectedTab}
-              collapsed={isSidebarCollapsed}
-              onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            />
-          </div>
-          {/* Note: content margin depends only on base collapsed state to avoid shifting on hover */}
-          <div className={`col-span-12 lg:col-span-12 ${isSidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
-            <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
-          {/* Messages Tab (UI-only with user list) */}
-          <TabsContent value="messages" className="space-y-6">
+          {/* Content shifted right for fixed sidebar (dynamic with collapse) */}
+          <div className={`col-span-12 lg:col-span-12 transition-all duration-300 ${ (isSidebarCollapsed && !isSidebarHovered) ? 'lg:pl-16' : 'lg:pl-64' }`}>
+            {/* Conditional sections rendered based on selectedTab */}
+          {/* Messages (UI-only with user list) */}
+          {selectedTab === 'messages' && (
+            <div className="space-y-6">
             {(() => {
               const users = chatUsers;
               const activeId = selectedChatUserId || users[0]?.id || null;
@@ -979,10 +864,10 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                         const activeId = selectedChatUserId || users[0]?.id || null;
                         if (!activeId || !text) return;
                         if (!user) { toast.error('Not authenticated'); return; }
-                        const appId = getAppIdForUser(activeId);
-                        if (!appId) { toast.error('No application found for this user'); return; }
+                        const userId = getUserIdForChat(activeId);
+                        if (!userId) { toast.error('No user id found for this conversation'); return; }
                         setPending(true);
-                        sendApplicationMessage(appId, { text, byUid: user.uid, byRole: 'admin' })
+                        sendDirectMessage(userId, { text, byUid: user.uid, byRole: 'admin' })
                           .then(() => {
                             setActiveInput('');
                             // Realtime listener will append the new message
@@ -997,10 +882,12 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                 </div>
               );
             })()}
-          </TabsContent>
-              <TabsContent value="overview" className="space-y-6">
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            </div>
+          )}
+            {selectedTab === 'overview' && (
+              <div className="space-y-6">
+            {/* Stats Cards: 2-column layout for 4 cards (2x2) */}
+            <div className="grid grid-cols-2 gap-4 md:gap-6">
               {overviewStats.map((stat, index) => (
                 <Card key={index}>
                   <CardContent className="p-6">
@@ -1008,9 +895,6 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                       <div>
                         <p className="text-sm text-muted-foreground">{stat.title}</p>
                         <p className="text-2xl font-bold">{stat.value}</p>
-                        <p className={`text-xs ${stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}>
-                          {stat.change} from last month
-                        </p>
                       </div>
                       <div className={`w-12 h-12 rounded-xl bg-opacity-10 flex items-center justify-center ${stat.color}`}>
                         <stat.icon className={`w-6 h-6 ${stat.color}`} />
@@ -1020,158 +904,18 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                 </Card>
               ))}
             </div>
-
-            {/* Charts */}
-            <div className="grid lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Monthly Applications</CardTitle>
-                  <CardDescription>Application trends over the last 6 months</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={monthlyData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" />
-                      <YAxis />
-                      <Tooltip />
-                      <Line type="monotone" dataKey="applications" stroke="#3b82f6" strokeWidth={2} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Service Distribution</CardTitle>
-                  <CardDescription>Applications by service type</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={serviceStats}
-                        cx="45%"
-                        cy="50%"
-                        innerRadius={55}
-                        outerRadius={95}
-                        paddingAngle={4}
-                        fill="#8884d8"
-                        dataKey="applications"
-                        labelLine={false}
-                        label={false}
-                      >
-                        {serviceStats.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value: number) => [value, 'Applications']} />
-                      {/* Legend on the right to avoid label overlap */}
-                      <Legend layout="vertical" align="right" verticalAlign="middle" iconType="circle" />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Service Performance */}
+            {/* Overview Analytics (empty state) */}
             <Card>
               <CardHeader>
-                <CardTitle>Service Performance</CardTitle>
-                <CardDescription>Overview of all service categories</CardDescription>
+                <CardTitle>Overview Analytics</CardTitle>
+                <CardDescription>Live analytics will appear here</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {serviceStats.map((service, index) => (
-                    <div key={index} className="space-y-3">
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-10 h-10 rounded-xl bg-opacity-10 flex items-center justify-center`} style={{ backgroundColor: `${service.color}20` }}>
-                          <service.icon className="w-5 h-5" style={{ color: service.color }} />
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-sm">{service.name}</h4>
-                          <p className="text-xs text-muted-foreground">{service.applications} applications</p>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>Success Rate</span>
-                          <span className="font-medium">{service.success}%</span>
-                        </div>
-                        <Progress value={service.success} className="h-2" />
-                        <p className="text-xs text-muted-foreground">Revenue: ETB {service.revenue.toLocaleString()}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <div className="p-6 text-sm text-muted-foreground">No analytics data yet.</div>
               </CardContent>
             </Card>
-          </TabsContent>
 
-          {/* Applications Tab */}
-          <TabsContent value="applications" className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold">Application Management</h2>
-              <div className="flex items-center space-x-2">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="hover:scale-[1.02] active:scale-95 transition-transform">
-                      <Filter className="w-4 h-4 mr-2" />
-                      Filter
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent align="end" className="w-64 space-y-3">
-                    <div>
-                      <p className="text-sm font-medium mb-2">Status</p>
-                      <div className="flex flex-wrap gap-2">
-                        {['Approved','Processing','Pending','Rejected'].map(s => (
-                          <Button key={s} variant="secondary" size="sm" className="px-2 py-1">{s}</Button>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium mb-2">Country</p>
-                      <div className="grid grid-cols-3 gap-2 text-xs">
-                        {['USA','Canada','UK','Australia','Germany','France'].map(c => (
-                          <Button key={c} variant="ghost" className="h-7 px-2 justify-start">{c}</Button>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="flex justify-end">
-                      <Button size="sm" className="bg-gradient-to-r from-red-500 to-pink-500">Apply</Button>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="hover:scale-[1.02] active:scale-95 transition-transform">
-                      <Search className="w-4 h-4 mr-2" />
-                      Search
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent align="end" className="w-80">
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-xs text-muted-foreground">Search by client, ID or service</label>
-                        <input className="mt-1 w-full bg-transparent border border-border rounded-md px-3 py-2 text-sm" placeholder="e.g. John Doe, APP-001, Work Visa" />
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button variant="secondary" className="justify-start">Clients</Button>
-                        <Button variant="secondary" className="justify-start">IDs</Button>
-                        <Button variant="secondary" className="justify-start">Services</Button>
-                        <Button variant="secondary" className="justify-start">Countries</Button>
-                      </div>
-                      <div className="flex justify-end">
-                        <Button size="sm" className="bg-gradient-to-r from-red-500 to-pink-500">Search</Button>
-                      </div>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-
-            <Card>
+        <Card>
               <CardHeader>
                 <CardTitle>Recent Applications</CardTitle>
                 <CardDescription>Latest visa applications and their status</CardDescription>
@@ -1240,10 +984,93 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
+          </div>
+        )}
 
-          {/* Users Tab */}
-          <TabsContent value="users" className="space-y-6">
+          {/* Applications */}
+          {selectedTab === 'applications' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold">Applications</h2>
+              </div>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>All Applications</CardTitle>
+                  <CardDescription>Manage and review submissions</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {loading ? (
+                    <div className="space-y-4">
+                      {[...Array(5)].map((_, index) => (
+                        <div key={index} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border rounded-lg animate-pulse">
+                          <div className="flex items-center space-x-4">
+                            <div className="w-10 h-10 bg-muted rounded-full"></div>
+                            <div className="space-y-2">
+                              <div className="h-4 bg-muted rounded w-32"></div>
+                              <div className="h-3 bg-muted rounded w-48"></div>
+                              <div className="h-3 bg-muted rounded w-24"></div>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-4">
+                            <div className="h-6 bg-muted rounded w-20"></div>
+                            <div className="h-4 bg-muted rounded w-16"></div>
+                            <div className="w-8 h-8 bg-muted rounded"></div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : applications.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                      <p>No applications yet</p>
+                      <p className="text-sm">They will appear here once users submit visa requests</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {applications.map((app) => {
+                        const client = `${app.personalInfo?.firstName || ''} ${app.personalInfo?.lastName || ''}`.trim() || 'Unknown';
+                        const service = getServiceDisplayName(app.travel?.serviceType);
+                        const country = app.travel?.destination || '—';
+                        const amount = app.estimatedCost ? `ETB ${app.estimatedCost.toLocaleString()}` : '—';
+                        return (
+                          <div key={app.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border rounded-lg">
+                            <div className="flex items-center space-x-4">
+                              <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
+                                <FileText className="w-5 h-5" />
+                              </div>
+                              <div>
+                                <h4 className="font-semibold">{client}</h4>
+                                <p className="text-sm text-muted-foreground">{service} - {country}</p>
+                                <p className="text-xs text-muted-foreground">{app.id}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-3 sm:space-x-4">
+                              <Badge className={getStatusColor(app.status)}>{app.status || 'pending'}</Badge>
+                              <span className="font-semibold">{amount}</span>
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                className="bg-gradient-to-r from-red-500 to-pink-500 text-white hover:from-red-600 hover:to-pink-600"
+                                onClick={() => openDetails(app.id)}
+                              >
+                                <Eye className="w-4 h-4 mr-2" />
+                                View Details
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Users */}
+          {selectedTab === 'users' && (
+            <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold">User Management</h2>
               <Button>
@@ -1258,8 +1085,8 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                   <div className="flex items-center space-x-3">
                     <Users className="w-8 h-8 text-blue-600" />
                     <div>
-                      <p className="text-2xl font-bold">8,392</p>
-                      <p className="text-sm text-muted-foreground">Total Users</p>
+                      <p className="text-2xl font-bold">{uniqueUsers}</p>
+                      <p className="text-sm text-muted-foreground">Unique Users (from applications)</p>
                     </div>
                   </div>
                 </CardContent>
@@ -1269,8 +1096,15 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                   <div className="flex items-center space-x-3">
                     <UserPlus className="w-8 h-8 text-green-600" />
                     <div>
-                      <p className="text-2xl font-bold">247</p>
-                      <p className="text-sm text-muted-foreground">New This Month</p>
+                      <p className="text-2xl font-bold">{
+                        applications.filter(a => {
+                          const d = (a.createdAt as any)?.toDate?.() as Date | undefined;
+                          if (!d) return false;
+                          const now = new Date();
+                          return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+                        }).length
+                      }</p>
+                      <p className="text-sm text-muted-foreground">Applications This Month</p>
                     </div>
                   </div>
                 </CardContent>
@@ -1280,8 +1114,15 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                   <div className="flex items-center space-x-3">
                     <Clock className="w-8 h-8 text-orange-600" />
                     <div>
-                      <p className="text-2xl font-bold">1,240</p>
-                      <p className="text-sm text-muted-foreground">Active Today</p>
+                      <p className="text-2xl font-bold">{
+                        applications.filter(a => {
+                          const d = (a.createdAt as any)?.toDate?.() as Date | undefined;
+                          if (!d) return false;
+                          const now = new Date();
+                          return d.toDateString() === now.toDateString();
+                        }).length
+                      }</p>
+                      <p className="text-sm text-muted-foreground">Applications Today</p>
                     </div>
                   </div>
                 </CardContent>
@@ -1294,21 +1135,15 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                 <CardDescription>Recent user registrations and activity</CardDescription>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={monthlyData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="applications" fill="#3b82f6" />
-                  </BarChart>
-                </ResponsiveContainer>
+                <div className="p-6 text-sm text-muted-foreground">No revenue data yet.</div>
               </CardContent>
             </Card>
-          </TabsContent>
+          </div>
+        )}
 
-          {/* VisaEd Tab */}
-          <TabsContent value="visaed" className="space-y-6">
+          {/* VisaEd */}
+          {selectedTab === 'visaed' && (
+            <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold">VisaEd Management</h2>
               <Button>
@@ -1317,14 +1152,14 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
               </Button>
             </div>
 
-            {/* KPI cards (static for now) */}
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* KPI cards (static for now): 2-column layout */}
+            <div className="grid grid-cols-2 gap-6">
               <Card>
                 <CardContent className="p-6">
                   <div className="flex items-center space-x-3">
                     <GraduationCap className="w-8 h-8 text-blue-600" />
                     <div>
-                      <p className="text-2xl font-bold">3,030</p>
+                      <p className="text-2xl font-bold">{visaEdRegs.length}</p>
                       <p className="text-sm text-muted-foreground">Total Enrollments</p>
                     </div>
                   </div>
@@ -1335,7 +1170,7 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                   <div className="flex items-center space-x-3">
                     <CheckCircle className="w-8 h-8 text-green-600" />
                     <div>
-                      <p className="text-2xl font-bold">2,330</p>
+                      <p className="text-2xl font-bold">{visaEdRegs.filter(r => r.status === 'completed').length}</p>
                       <p className="text-sm text-muted-foreground">Completed Courses</p>
                     </div>
                   </div>
@@ -1346,8 +1181,12 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                   <div className="flex items-center space-x-3">
                     <Star className="w-8 h-8 text-yellow-600" />
                     <div>
-                      <p className="text-2xl font-bold">4.7</p>
-                      <p className="text-sm text-muted-foreground">Average Rating</p>
+                      <p className="text-2xl font-bold">{(() => {
+                        const total = visaEdRegs.length || 1;
+                        const completed = visaEdRegs.filter(r => r.status === 'completed').length;
+                        return Math.round((completed / total) * 100);
+                      })()}%</p>
+                      <p className="text-sm text-muted-foreground">Completion Rate</p>
                     </div>
                   </div>
                 </CardContent>
@@ -1357,8 +1196,8 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                   <div className="flex items-center space-x-3">
                     <TrendingUp className="w-8 h-8 text-purple-600" />
                     <div>
-                      <p className="text-2xl font-bold">77%</p>
-                      <p className="text-sm text-muted-foreground">Completion Rate</p>
+                      <p className="text-2xl font-bold">{visaEdRegs.filter(r => r.status === 'active').length}</p>
+                      <p className="text-sm text-muted-foreground">Active Enrollments</p>
                     </div>
                   </div>
                 </CardContent>
@@ -1453,44 +1292,19 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
 
             <Card>
               <CardHeader>
-                <CardTitle>Course Performance</CardTitle>
-                <CardDescription>Enrollment and completion statistics</CardDescription>
+                <CardTitle>Overview Analytics</CardTitle>
+                <CardDescription>Live analytics will appear here</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-6">
-                  {visaEdStats.map((course, index) => (
-                    <div key={index} className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-semibold">{course.course}</h4>
-                        <div className="flex items-center space-x-2">
-                          <Star className="w-4 h-4 text-yellow-500" />
-                          <span className="text-sm">{course.rating}</span>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-3 gap-4 text-sm">
-                        <div>
-                          <p className="text-muted-foreground">Enrolled</p>
-                          <p className="font-semibold">{course.enrolled}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Completed</p>
-                          <p className="font-semibold">{course.completed}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Rate</p>
-                          <p className="font-semibold">{Math.round((course.completed / course.enrolled) * 100)}%</p>
-                        </div>
-                      </div>
-                      <Progress value={(course.completed / course.enrolled) * 100} className="h-2" />
-                    </div>
-                  ))}
-                </div>
+                <div className="p-6 text-sm text-muted-foreground">No analytics data yet.</div>
               </CardContent>
             </Card>
-          </TabsContent>
+          </div>
+        )}
 
-          {/* Allen AI Tab */}
-          <TabsContent value="allen" className="space-y-6">
+          {/* Allen AI */}
+          {selectedTab === 'allen' && (
+            <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold">Allen AI Analytics</h2>
               <Button>
@@ -1498,65 +1312,22 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                 AI Settings
               </Button>
             </div>
-
-            <div className="grid md:grid-cols-3 gap-6">
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-3">
-                    <MessageSquare className="w-8 h-8 text-blue-600" />
-                    <div>
-                      <p className="text-2xl font-bold">2,250</p>
-                      <p className="text-sm text-muted-foreground">Daily Queries</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="w-8 h-8 text-green-600" />
-                    <div>
-                      <p className="text-2xl font-bold">89%</p>
-                      <p className="text-sm text-muted-foreground">Resolution Rate</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-3">
-                    <Star className="w-8 h-8 text-yellow-600" />
-                    <div>
-                      <p className="text-2xl font-bold">4.6</p>
-                      <p className="text-sm text-muted-foreground">Satisfaction Score</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
+            {/* No mock KPIs; show clean empty state until real analytics are wired */}
             <Card>
               <CardHeader>
                 <CardTitle>Allen AI Performance</CardTitle>
                 <CardDescription>Daily interaction metrics and satisfaction scores</CardDescription>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={allenInteractions}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="queries" stroke="#3b82f6" strokeWidth={2} />
-                    <Line type="monotone" dataKey="resolved" stroke="#10b981" strokeWidth={2} />
-                  </LineChart>
-                </ResponsiveContainer>
+                <div className="p-6 text-sm text-muted-foreground">No analytics data yet.</div>
               </CardContent>
             </Card>
-          </TabsContent>
+          </div>
+        )}
 
-          {/* Analytics Tab */}
-          <TabsContent value="analytics" className="space-y-6">
+          {/* Analytics */}
+          {selectedTab === 'analytics' && (
+            <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold">Advanced Analytics</h2>
               <div className="flex items-center space-x-2">
@@ -1578,15 +1349,7 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                   <CardDescription>Monthly revenue growth analysis</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={monthlyData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="revenue" fill="#10b981" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <div className="p-6 text-sm text-muted-foreground">No revenue data yet.</div>
                 </CardContent>
               </Card>
 
@@ -1596,17 +1359,7 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                   <CardDescription>Approval rates across different services</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {serviceStats.map((service, index) => (
-                      <div key={index} className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">{service.name}</span>
-                          <span className="text-sm text-muted-foreground">{service.success}%</span>
-                        </div>
-                        <Progress value={service.success} className="h-2" />
-                      </div>
-                    ))}
-                  </div>
+                  <div className="p-6 text-sm text-muted-foreground">No service stats yet.</div>
                 </CardContent>
               </Card>
             </div>
@@ -1617,72 +1370,12 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                 <CardDescription>Applications by destination country</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {['USA', 'Canada', 'UK', 'Australia', 'Germany', 'France', 'Japan', 'Others'].map((country, index) => (
-                    <div key={index} className="text-center p-4 border rounded-lg">
-                      <p className="font-semibold">{country}</p>
-                      <p className="text-2xl font-bold text-primary">{Math.floor(Math.random() * 2000) + 500}</p>
-                      <p className="text-xs text-muted-foreground">applications</p>
-                    </div>
-                  ))}
-                </div>
+                <div className="p-6 text-sm text-muted-foreground">No geographic data yet.</div>
               </CardContent>
-            </Card>
-          </TabsContent>
-
-
-              {/* Users Tab */}
-              <TabsContent value="users" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>User Management</CardTitle>
-                    <CardDescription>Manage registered users and their permissions</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground">User management features coming soon...</p>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              {/* VisaEd Tab */}
-              <TabsContent value="visaed" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>VisaEd Analytics</CardTitle>
-                    <CardDescription>Educational content performance and engagement</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground">VisaEd analytics coming soon...</p>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              {/* Allen AI Tab */}
-              <TabsContent value="allen" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Allen AI Analytics</CardTitle>
-                    <CardDescription>AI assistant performance and user interactions</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground">Allen AI analytics coming soon...</p>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              {/* Analytics Tab */}
-              <TabsContent value="analytics" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Advanced Analytics</CardTitle>
-                    <CardDescription>Detailed reports and business intelligence</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground">Advanced analytics coming soon...</p>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
+              </Card>
+              </div>
+            )}
+            {/* End conditional sections */}
           </div>
         </div>
       </div>
@@ -1704,12 +1397,4 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
       />
     </div>
   );
-}
-
-export interface DesktopSidebarProps {
-  items: any[];
-  selected: string;
-  onSelect: (value: string) => void;
-  collapsed?: boolean;
-  onToggleCollapse?: () => void;
 }

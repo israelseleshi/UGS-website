@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
+
 import {
   Card,
   CardContent,
@@ -15,8 +16,9 @@ import {
   AvatarImage,
 } from "./avatar";
 import { Progress } from "./progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
+import { Switch } from "./switch";
 import { DesktopSidebar } from "./DesktopSidebar";
+
 import {
   BarChart,
   Bar,
@@ -75,7 +77,7 @@ import {
 } from "lucide-react";
 import { getTheme as readTheme, toggleTheme as flipTheme, type AppTheme } from "./theme";
 import { useAuth } from "../lib/auth";
-import { getUser, listUserApplications, upsertUser, listApplicationMessages, sendApplicationMessage, subscribeApplicationMessages, type AppMessage } from "../lib/db";
+import { getUser, listUserApplications, upsertUser, sendDirectMessage, subscribeDirectMessages, createVisaApplication, type AppMessage } from "../lib/db";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './dialog';
 import { MobileSidebar, MobileMenuButton } from './MobileSidebar';
 import { useIsMobile } from './use-mobile';
@@ -209,17 +211,17 @@ export function ClientDashboard({
     };
   }, [user]);
 
-  // Manage Support tab subscription lifecycle
+  // Manage Support tab subscription lifecycle (top-level user messages)
   React.useEffect(() => {
-    // Only subscribe when on Support tab and we have an appId
-    if (selectedTab !== 'support' || !supportAppId) {
+    // Only subscribe when on Support tab and we have user
+    if (selectedTab !== 'support' || !user) {
       supportUnsub.current?.();
       supportUnsub.current = undefined;
       return;
     }
     setSupportLoading(true);
     supportUnsub.current?.();
-    supportUnsub.current = subscribeApplicationMessages(supportAppId, (items) => {
+    supportUnsub.current = subscribeDirectMessages(user.uid, (items) => {
       setSupportMessages(items as any);
     });
     setSupportLoading(false);
@@ -227,7 +229,38 @@ export function ClientDashboard({
       supportUnsub.current?.();
       supportUnsub.current = undefined;
     };
-  }, [selectedTab, supportAppId]);
+  }, [selectedTab, user]);
+
+  async function createNewApplication() {
+    if (!user) return;
+    try {
+      const created = await createVisaApplication(user.uid, {
+        status: 'draft',
+        personalInfo: { firstName: '', lastName: '', email: user.email ?? '' },
+        travel: { destination: '', serviceType: '' },
+      });
+      const id = (created as any)?.id as string;
+      // Optimistically add to local list
+      setApplications((prev) => [
+        {
+          id,
+          type: 'Visa Application',
+          country: '',
+          status: 'Draft',
+          submittedDate: '',
+          expectedDate: '',
+          progress: 10,
+          documents: 0,
+          amount: '',
+          priority: 'Standard',
+          officer: '',
+        },
+        ...prev,
+      ]);
+      // Prepare Support chat for the new app
+      setSelectedTab('support');
+    } catch {}
+  }
 
   async function openMessages(appId: string) {
     try {
@@ -235,7 +268,7 @@ export function ClientDashboard({
       setMessagesOpen(true);
       setMessagesLoading(true);
       messagesUnsub.current?.();
-      messagesUnsub.current = subscribeApplicationMessages(appId, (items) => {
+      messagesUnsub.current = subscribeDirectMessages(user?.uid || '', (items) => {
         setMessages(items as any);
       });
     } catch {
@@ -246,17 +279,17 @@ export function ClientDashboard({
   }
 
   async function sendMsg() {
-    if (!selectedMsgAppId || !user || !newMessage.trim()) return;
+    if (!user || !newMessage.trim()) return;
     try {
-      await sendApplicationMessage(selectedMsgAppId, { text: newMessage.trim(), byUid: user.uid, byRole: 'user' });
+      await sendDirectMessage(user.uid, { text: newMessage.trim(), byUid: user.uid, byRole: 'user' });
       setNewMessage('');
     } catch {}
   }
 
   async function sendSupportMsg() {
-    if (!supportAppId || !user || !supportInput.trim()) return;
+    if (!user || !supportInput.trim()) return;
     try {
-      await sendApplicationMessage(supportAppId, { text: supportInput.trim(), byUid: user.uid, byRole: 'user' });
+      await sendDirectMessage(user.uid, { text: supportInput.trim(), byUid: user.uid, byRole: 'user' });
       setSupportInput('');
     } catch {}
   }
@@ -293,50 +326,7 @@ export function ClientDashboard({
     }
   }
 
-  const documents = [
-    {
-      name: "Passport Copy",
-      type: "PDF",
-      size: "2.4 MB",
-      uploaded: "2024-01-15",
-      status: "Verified",
-    },
-    {
-      name: "Bank Statement",
-      type: "PDF",
-      size: "1.8 MB",
-      uploaded: "2024-01-15",
-      status: "Verified",
-    },
-    {
-      name: "Employment Letter",
-      type: "PDF",
-      size: "956 KB",
-      uploaded: "2024-01-14",
-      status: "Pending",
-    },
-    {
-      name: "Photo ID",
-      type: "JPG",
-      size: "1.2 MB",
-      uploaded: "2024-01-13",
-      status: "Verified",
-    },
-    {
-      name: "Travel Insurance",
-      type: "PDF",
-      size: "2.1 MB",
-      uploaded: "2024-01-12",
-      status: "Verified",
-    },
-  ];
-
-  const recentActivity = [
-    { action: "Document verified", description: "Passport copy approved by visa officer", time: "2 hours ago", type: "success" },
-    { action: "Application updated", description: "Tourist visa application moved to processing", time: "1 day ago", type: "info" },
-    { action: "Payment received", description: "Express processing fee payment confirmed", time: "2 days ago", type: "success" },
-    { action: "Document requested", description: "Additional bank statement required", time: "3 days ago", type: "warning" },
-  ];
+  // No mock data: documents and activities are backend-only. Show empty states until wired.
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -365,12 +355,12 @@ export function ClientDashboard({
   };
 
   const clientTabs = [
-    { value: 'overview', label: 'Overview', icon: BarChart3, description: 'Dashboard overview and stats' },
-    { value: 'applications', label: 'Applications', icon: FileText, badge: applications.length.toString(), description: 'Manage your visa applications' },
-    { value: 'documents', label: 'Documents', icon: Upload, description: 'Upload and manage documents' },
-    { value: 'support', label: 'Support', icon: MessageSquare, description: 'Get help and support' },
-    { value: 'profile', label: 'Profile', icon: User, description: 'Manage your profile' },
-    { value: 'settings', label: 'Settings', icon: Settings, description: 'Account settings and preferences' }
+    { value: 'overview', label: 'Overview', icon: BarChart3 },
+    { value: 'applications', label: 'Applications', icon: FileText, badge: applications.length.toString() },
+    { value: 'documents', label: 'Documents', icon: Upload },
+    { value: 'support', label: 'Support', icon: MessageSquare },
+    { value: 'profile', label: 'Profile', icon: User },
+    { value: 'settings', label: 'Settings', icon: Settings }
   ];
 
   return (
@@ -384,12 +374,14 @@ export function ClientDashboard({
           <div className="flex flex-wrap items-center justify-between gap-3 h-20">
             <div className="flex items-center space-x-6">
               <MobileMenuButton onClick={() => setMobileSidebarOpen(true)} />
+              {/* Desktop sidebar toggle */}
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                className="hidden md:inline-flex"
+                onClick={() => setIsSidebarCollapsed(v => !v)}
+                className="hidden lg:inline-flex"
                 aria-label="Toggle sidebar"
+                title="Toggle sidebar"
               >
                 {isSidebarCollapsed ? (
                   <X className="w-5 h-5" />
@@ -424,41 +416,31 @@ export function ClientDashboard({
         </div>
       </motion.div>
 
-      {/* Fixed left desktop sidebar; expands on hover when collapsed (Gemini-like) */}
-      <div
-        className="hidden lg:block fixed left-0 top-20 z-30 h-[calc(100vh-5rem)] py-2"
-        onMouseEnter={() => setIsSidebarHovered(true)}
-        onMouseLeave={() => setIsSidebarHovered(false)}
-      >
-        <div className={`${(isSidebarCollapsed && !isSidebarHovered) ? 'w-16' : 'w-64'} h-full px-2`}>
+      {/* Fixed left desktop sidebar; full height with collapse/expand */}
+      <div className="hidden lg:flex fixed left-0 top-20 bottom-0 z-30 items-stretch"
+           onMouseEnter={() => setIsSidebarHovered(true)}
+           onMouseLeave={() => setIsSidebarHovered(false)}>
+        <div className={`${(isSidebarCollapsed && !isSidebarHovered) ? 'w-16' : 'w-64'} h-full transition-all duration-300`}>
           <DesktopSidebar
             items={clientTabs as any}
             selected={selectedTab}
             onSelect={setSelectedTab}
             userData={{ name: clientData.name, email: clientData.email, status: clientData.status, avatar: clientData.profileImage || undefined }}
-            collapsed={isSidebarCollapsed}
-            onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            collapsed={isSidebarCollapsed && !isSidebarHovered}
+            onToggleCollapse={() => setIsSidebarCollapsed(v => !v)}
+            headerTitle="UGS Client Portal"
+            headerSubtitle="Premium Dashboard"
+            onLogout={onLogout}
           />
         </div>
       </div>
 
       <div className="site-container site-max pt-8 pb-12 lg:pt-14 lg:pb-16">
         <div className="grid grid-cols-12 gap-6">
-          {/* Hide legacy sidebar column on lg to avoid duplicate */}
-          <div className="col-span-12 lg:hidden">
-            <DesktopSidebar 
-              items={clientTabs as any} 
-              selected={selectedTab} 
-              onSelect={setSelectedTab} 
-              userData={{ name: clientData.name, email: clientData.email, status: clientData.status, avatar: clientData.profileImage || undefined }}
-              collapsed={isSidebarCollapsed} 
-              onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} 
-            />
-          </div>
-          {/* Note: content padding depends only on base collapsed state to avoid shifting on hover */}
-          <div className={`col-span-12 lg:col-span-12 ${isSidebarCollapsed ? 'lg:pl-16' : 'lg:pl-64'}`}>
-            <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
-              <TabsContent value="overview" className="space-y-8">
+          {/* Content shifted right for fixed sidebar (dynamic with collapse) */}
+          <div className={`col-span-12 lg:col-span-12 transition-all duration-300 ${ (isSidebarCollapsed && !isSidebarHovered) ? 'lg:pl-16' : 'lg:pl-64' }`}>
+            {selectedTab === "overview" && (
+              <div className="space-y-8">
                 <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }}>
                   <Card className="relative overflow-hidden bg-gradient-to-br from-red-500 via-pink-500 to-orange-500 text-white border-0 shadow-2xl">
                     <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent" />
@@ -496,25 +478,37 @@ export function ClientDashboard({
                 </motion.div>
 
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10">
-                  {[{ title: "Active Applications", value: "3", change: "+1", icon: FileText, gradient: "from-blue-500 to-cyan-500" }, { title: "Visas Approved", value: "8", change: "+2", icon: CheckCircle, gradient: "from-emerald-500 to-teal-500" }, { title: "Documents Verified", value: "24", change: "+5", icon: Shield, gradient: "from-purple-500 to-indigo-500" }, { title: "Countries Visited", value: "12", change: "+3", icon: Globe, gradient: "from-orange-500 to-red-500" }].map((stat, index) => (
-                    <motion.div key={index} whileHover={{ scale: 1.02, y: -5 }} transition={{ type: "spring", stiffness: 300 }}>
-                      <Card className="relative overflow-hidden bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl">
-                        <CardContent className="p-6 lg:p-8">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{stat.title}</p>
-                              <p className="text-3xl font-bold">{stat.value}</p>
-                              <p className="text-xs text-emerald-600 dark:text-emerald-400">{stat.change} this month</p>
+                  {(() => {
+                    const total = applications.length;
+                    const approved = applications.filter((a) => a.status === 'Approved').length;
+                    const verifiedDocs = 0; // backend-only; integrate later
+                    const countries = new Set(applications.map((a) => a.country).filter(Boolean)).size;
+                    const stats = [
+                      { title: 'Active Applications', value: String(total), change: '', icon: FileText, gradient: 'from-blue-500 to-cyan-500' },
+                      { title: 'Visas Approved', value: String(approved), change: '', icon: CheckCircle, gradient: 'from-emerald-500 to-teal-500' },
+                      { title: 'Documents Verified', value: String(verifiedDocs), change: '', icon: Shield, gradient: 'from-purple-500 to-indigo-500' },
+                      { title: 'Countries Mentioned', value: String(countries), change: '', icon: Globe, gradient: 'from-orange-500 to-red-500' },
+                    ];
+                    return stats.map((stat, index) => (
+                      <motion.div key={index} whileHover={{ scale: 1.02, y: -5 }} transition={{ type: "spring", stiffness: 300 }}>
+                        <Card className="relative overflow-hidden bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl">
+                          <CardContent className="p-6 lg:p-8">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{stat.title}</p>
+                                <p className="text-3xl font-bold">{stat.value}</p>
+                                {stat.change ? (<p className="text-xs text-emerald-600 dark:text-emerald-400">{stat.change} this month</p>) : null}
+                              </div>
+                              <div className={`w-12 h-12 rounded-xl bg-gradient-to-r ${stat.gradient} flex items-center justify-center shadow-lg`}>
+                                <stat.icon className="w-6 h-6 text-white" />
+                              </div>
                             </div>
-                            <div className={`w-12 h-12 rounded-xl bg-gradient-to-r ${stat.gradient} flex items-center justify-center shadow-lg`}>
-                              <stat.icon className="w-6 h-6 text-white" />
-                            </div>
-                          </div>
-                        </CardContent>
-                        <motion.div className={`absolute bottom-0 left-0 h-1 bg-gradient-to-r ${stat.gradient}`} initial={{ width: 0 }} animate={{ width: "100%" }} transition={{ delay: 0.5 + index * 0.1, duration: 0.8 }} />
-                      </Card>
-                    </motion.div>
-                  ))}
+                          </CardContent>
+                          <motion.div className={`absolute bottom-0 left-0 h-1 bg-gradient-to-r ${stat.gradient}`} initial={{ width: 0 }} animate={{ width: "100%" }} transition={{ delay: 0.5 + index * 0.1, duration: 0.8 }} />
+                        </Card>
+                      </motion.div>
+                    ));
+                  })()}
                 </motion.div>
 
                 <div className="grid lg:grid-cols-3 gap-8">
@@ -563,18 +557,7 @@ export function ClientDashboard({
                         <CardTitle className="flex items-center space-x-2"><Clock className="w-5 h-5 text-primary" /><span>Recent Activity</span></CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="space-y-4">
-                          {recentActivity.slice(0, 4).map((activity, index) => (
-                            <motion.div key={index} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 * index }} whileHover={{ x: 10 }} className="flex items-start space-x-3 p-3 rounded-lg bg-gradient-to-r from-white/50 to-transparent dark:from-gray-800/50">
-                              <div className={`w-2 h-2 rounded-full mt-2 ${activity.type === 'success' ? 'bg-emerald-500' : activity.type === 'warning' ? 'bg-amber-500' : 'bg-blue-500'}`} />
-                              <div className="flex-1">
-                                <p className="text-sm font-medium">{activity.action}</p>
-                                <p className="text-xs text-gray-600 dark:text-gray-400">{activity.description}</p>
-                                <p className="text-xs text-gray-400">{activity.time}</p>
-                              </div>
-                            </motion.div>
-                          ))}
-                        </div>
+                        <div className="p-6 text-sm text-gray-600 dark:text-gray-400">No recent activity yet.</div>
                       </CardContent>
                     </Card>
 
@@ -584,7 +567,7 @@ export function ClientDashboard({
                       </CardHeader>
                       <CardContent className="space-y-3">
                         <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                          <Button variant="secondary" className="w-full justify-start bg-white/20 hover:bg-white/30 text-white border-0">
+                          <Button variant="secondary" className="w-full justify-start bg-white/20 hover:bg-white/30 text-white border-0" onClick={createNewApplication}>
                             <Plus className="w-4 h-4 mr-2" />
                             New Application
                           </Button>
@@ -605,22 +588,35 @@ export function ClientDashboard({
                     </Card>
                   </motion.div>
                 </div>
-              </TabsContent>
+              </div>
+            )}
 
-              <TabsContent value="applications" className="space-y-6">
+            {selectedTab === "applications" && (
+              <div className="space-y-6">
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
                   <div>
                     <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">My Applications</h2>
                     <p className="text-gray-600 dark:text-gray-400">Manage and track your visa applications</p>
                   </div>
                   <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                    <Button className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600">
+                    <Button className="bg-gradient-to-r from-red-500 to-pink-500" onClick={createNewApplication}>
                       <Plus className="w-4 h-4 mr-2" />
                       New Application
                     </Button>
                   </motion.div>
                 </motion.div>
 
+                {applications.length === 0 ? (
+                  <Card className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl">
+                    <CardContent className="p-8 text-center">
+                      <h3 className="text-xl font-semibold mb-2">No applications yet</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Create your first application to get started.</p>
+                      <Button className="bg-gradient-to-r from-red-500 to-pink-500" onClick={createNewApplication}>
+                        <Plus className="w-4 h-4 mr-2" /> New Application
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ) : (
                 <div className="space-y-6">
                   {applications.map((app, index) => (
                     <motion.div key={app.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 * index }} whileHover={{ scale: 1.02 }}>
@@ -677,129 +673,102 @@ export function ClientDashboard({
                     </motion.div>
                   ))}
                 </div>
-              </TabsContent>
+                )}
+              </div>
+            )}
 
-              <TabsContent value="documents" className="space-y-6">
+            {selectedTab === "documents" && (
+              <div className="space-y-6">
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
                   <div>
                     <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">Document Manager</h2>
                     <p className="text-gray-600 dark:text-gray-400">Securely store and manage your visa documents</p>
                   </div>
-                  <div className="flex space-x-3">
-                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                      <Button variant="outline"><Search className="w-4 h-4 mr-2" />Search</Button>
-                    </motion.div>
-                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                      <Button className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600"><Upload className="w-4 h-4 mr-2" />Upload Document</Button>
-                    </motion.div>
+                  <div className="flex items-center gap-2">
+                    <div className="relative hidden sm:block">
+                      <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input className="pl-9 pr-3 py-2 rounded-md bg-transparent border border-border text-sm" placeholder="Search" />
+                    </div>
+                    <Button className="bg-gradient-to-r from-red-500 to-pink-500">
+                      <Upload className="w-4 h-4 mr-2" /> Upload Document
+                    </Button>
                   </div>
                 </motion.div>
 
                 <Card className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl">
-                  <CardContent className="p-6">
-                    <div className="space-y-4">
-                      {documents.map((doc, index) => (
-                        <motion.div key={index} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 * index }} whileHover={{ scale: 1.02 }} className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-white/50 to-gray-50/50 dark:from-gray-800/50 dark:to-gray-700/50 border border-white/20 dark:border-gray-700/20">
-                          <div className="flex items-center space-x-4">
-                            <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
-                              <FileText className="w-6 h-6 text-white" />
-                            </div>
-                            <div>
-                              <h4 className="font-semibold">{doc.name}</h4>
-                              <p className="text-sm text-gray-600 dark:text-gray-400">{doc.type} • {doc.size} • Uploaded {doc.uploaded}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-3">
-                            <Badge className={doc.status === 'Verified' ? getStatusColor('Approved') : getStatusColor('Under Review')}>{doc.status}</Badge>
-                            <div className="flex space-x-1">
-                              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                                <Button variant="ghost" size="sm"><Eye className="w-4 h-4" /></Button>
-                              </motion.div>
-                              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                                <Button variant="ghost" size="sm"><Download className="w-4 h-4" /></Button>
-                              </motion.div>
-                              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                                <Button variant="ghost" size="sm"><Trash2 className="w-4 h-4 text-red-500" /></Button>
-                              </motion.div>
-                            </div>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
+                  <CardContent className="p-0">
+                    <div className="p-8 text-center text-sm text-gray-600 dark:text-gray-400">No documents yet.</div>
                   </CardContent>
                 </Card>
-              </TabsContent>
+              </div>
+            )}
 
-              <TabsContent value="support" className="space-y-6">
+            {selectedTab === "support" && (
+              <div className="space-y-6">
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
                   <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent mb-2">Premium Support Center</h2>
                   <p className="text-gray-600 dark:text-gray-400">Get expert help from our dedicated support team</p>
                 </motion.div>
 
-                {/* Choose which application to chat about */}
+                {/* App context (no dropdown). Auto-select most recent in loader. */}
                 {applications.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm text-gray-600 dark:text-gray-400">Application</label>
-                    <select
-                      value={supportAppId ?? ''}
-                      onChange={(e) => setSupportAppId(e.target.value || null)}
-                      className="text-sm px-2 py-1 rounded-md border bg-transparent"
-                    >
-                      {applications.map((app: any) => (
-                        <option key={app.id} value={app.id}>{app.type} • {app.country} • {app.id}</option>
-                      ))}
-                    </select>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    Chatting about: <span className="font-medium text-foreground">{(applications.find(a => a.id === supportAppId) || applications[0])?.type} • {(applications.find(a => a.id === supportAppId) || applications[0])?.country}</span>
                   </div>
                 )}
+                {applications.length === 0 ? (
+                  <Card className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl">
+                    <CardContent className="p-6 flex items-center justify-between gap-3">
+                      <p className="text-sm text-gray-600 dark:text-gray-400">You don’t have any applications yet. Create one to start chatting with support.</p>
+                      <Button className="bg-gradient-to-r from-red-500 to-pink-500" onClick={createNewApplication}>
+                        <Plus className="w-4 h-4 mr-2" /> New Application
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ) : supportAppId ? (
+                  <ChatPanel
+                    title="Support Chat"
+                    description="Chat with UGS support about your application"
+                    messages={(supportMessages || []).map((m) => ({
+                      id: m.id,
+                      text: (m as any).text,
+                      by: (m as any).byRole,
+                      at: (m as any)?.createdAt?.toDate?.()?.toLocaleString?.() || undefined,
+                    }))}
+                    pending={supportLoading}
+                    input={supportInput}
+                    setInput={setSupportInput}
+                    onSend={sendSupportMsg}
+                    placeholder="Type your message to support..."
+                    emptyState="No messages yet. Start the conversation with support."
+                  />
+                ) : (
+                  <Card className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl">
+                    <CardContent className="p-6">
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Preparing chat…</p>
+                    </CardContent>
+                  </Card>
+                )}
 
-                <ChatPanel
-                  title="Support Chat"
-                  description={supportAppId ? `Chat about application ${supportAppId}` : 'Select an application to start chatting'}
-                  messages={supportMessages.map((m) => ({ id: m.id, text: m.text, by: (m.byRole === 'admin' ? 'admin' : 'user') as 'admin' | 'user', at: '' }))}
-                  pending={supportLoading}
-                  input={supportInput}
-                  setInput={setSupportInput}
-                  onSend={sendSupportMsg}
-                  placeholder={supportAppId ? "Type your message to support..." : "Select an application first"}
-                  emptyState={supportAppId ? "No messages yet. Start a conversation with support." : "Choose an application to start chatting."}
-                />
-
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {[{ title: "Live Chat Support", description: "24/7 instant assistance", icon: MessageSquare, gradient: "from-green-500 to-emerald-500", action: "Start Chat" }, { title: "Video Consultation", description: "Face-to-face expert guidance", icon: Camera, gradient: "from-blue-500 to-cyan-500", action: "Book Call" }, { title: "Priority Phone Line", description: "Direct access to specialists", icon: Phone, gradient: "from-purple-500 to-indigo-500", action: "Call Now" }].map((support, index) => (
-                    <motion.div key={index} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 * index }} whileHover={{ scale: 1.05 }}>
-                      <Card className="text-center bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl">
-                        <CardContent className="p-6">
-                          <div className={`w-16 h-16 bg-gradient-to-r ${support.gradient} rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg`}>
-                            <support.icon className="w-8 h-8 text-white" />
-                          </div>
-                          <h3 className="text-xl font-bold mb-2">{support.title}</h3>
-                          <p className="text-gray-600 dark:text-gray-400 mb-4">{support.description}</p>
-                          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                            <Button className={`w-full bg-gradient-to-r ${support.gradient} hover:opacity-90`}>{support.action}</Button>
-                          </motion.div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
+                <div className="grid md:grid-cols-3 gap-6">
+                  {[{ title: 'Live Chat Support', desc: '24/7 instant assistance', icon: MessageSquare, btn: 'Start Chat', color: 'from-emerald-500 to-green-500' }, { title: 'Video Consultation', desc: 'Face-to-face expert guidance', icon: Camera, btn: 'Book Call', color: 'from-indigo-500 to-blue-500' }, { title: 'Priority Phone Line', desc: 'Direct access to specialists', icon: Phone, btn: 'Call Now', color: 'from-purple-500 to-pink-500' }].map((s, idx) => (
+                    <Card key={idx} className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl">
+                      <CardContent className="p-6 text-center">
+                        <div className={`mx-auto w-12 h-12 rounded-xl bg-gradient-to-r ${s.color} flex items-center justify-center mb-3`}>
+                          <s.icon className="w-6 h-6 text-white" />
+                        </div>
+                        <div className="font-semibold mb-1">{s.title}</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400 mb-4">{s.desc}</div>
+                        <Button variant="outline" className="mx-auto">{s.btn}</Button>
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
+              </div>
+            )}
 
-                <Card className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl">
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2"><HelpCircle className="w-5 h-5 text-primary" /><span>Frequently Asked Questions</span></CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {["How long does visa processing take?","What documents do I need for my application?","Can I track my application status?","What if my visa is denied?"].map((question, index) => (
-                        <motion.div key={index} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 * index }} whileHover={{ x: 10 }} className="p-4 rounded-lg bg-gradient-to-r from-white/50 to-gray-50/50 dark:from-gray-800/50 dark:to-gray-700/50 cursor-pointer border border-white/20 dark:border-gray-700/20">
-                          <p className="font-medium">{question}</p>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="profile" className="space-y-6">
+            {selectedTab === "profile" && (
+              <div className="space-y-6">
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
                   <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent mb-2">My Profile</h2>
                   <p className="text-gray-600 dark:text-gray-400">Manage your personal information and preferences</p>
@@ -809,60 +778,75 @@ export function ClientDashboard({
                   <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
                     <Card className="text-center bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl">
                       <CardContent className="p-6">
-                        <motion.div whileHover={{ scale: 1.05 }} className="relative inline-block mb-6">
-                          <AvatarUpload mode="overlay" sizePx={96} />
-                        </motion.div>
-                        <h3 className="text-xl font-bold mb-2">{clientData.name}</h3>
-                        <p className="text-gray-600 dark:text-gray-400 mb-1">{clientData.email}</p>
-                        <p className="text-gray-600 dark:text-gray-400 mb-4">{clientData.phone}</p>
-                        <div className="flex items-center justify-center space-x-2 mb-4"><Crown className="w-4 h-4 text-yellow-500" /><span className="text-sm font-semibold text-primary">{clientData.status}</span></div>
-                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                          <Button className="w-full bg-gradient-to-r from-red-500 to-pink-500"><Edit className="w-4 h-4 mr-2" />Edit Profile</Button>
-                        </motion.div>
+                        <div className="flex flex-col items-center gap-4">
+                          <div className="relative">
+                            <Avatar className="w-24 h-24">
+                              <AvatarImage src={clientData.profileImage || undefined} alt={clientData.name} />
+                              <AvatarFallback>{clientData.name?.slice(0,2).toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                            <button
+                              type="button"
+                              className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-md border border-white/70"
+                              title="Update photo"
+                              aria-label="Update photo"
+                            >
+                              <Camera className="w-4 h-4" />
+                            </button>
+                          </div>
+                          <div>
+                            <h3 className="text-xl font-semibold">{clientData.name}</h3>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">{clientData.email}</p>
+                          </div>
+                        </div>
+                        <div className="mt-6 flex flex-col gap-3">
+                          <Button variant="outline">Update Photo</Button>
+                          <Button variant="outline">Edit Personal Info</Button>
+                          <Button className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"><CheckCircle className="w-4 h-4 mr-2" />Save Changes</Button>
+                        </div>
                       </CardContent>
                     </Card>
                   </motion.div>
-
-                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="lg:col-span-2">
+                  <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }} className="lg:col-span-2">
                     <Card className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl">
                       <CardHeader>
-                        <CardTitle>Personal Information</CardTitle>
-                        <CardDescription>Update your profile details and preferences</CardDescription>
+                        <CardTitle className="flex items-center space-x-2"><User className="w-5 h-5 text-primary" /><span>Personal Information</span></CardTitle>
                       </CardHeader>
-                      <CardContent className="space-y-6">
-                        <div className="grid md:grid-cols-2 gap-6">
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">Full Name</label>
-                            <motion.input whileFocus={{ scale: 1.02 }} className="w-full p-3 rounded-xl bg-white/50 dark:bg-gray-800/50 border border-white/20 dark:border-gray-700/20 backdrop-blur-sm" defaultValue={clientData.name} />
+                      <CardContent>
+                        <div className="grid md:grid-cols-2 gap-5">
+                          <div>
+                            <label className="text-sm text-gray-600 dark:text-gray-400">Full Name</label>
+                            <input defaultValue={clientData.name} className="mt-1 w-full bg-transparent border border-border rounded-md px-3 py-2 text-sm" />
                           </div>
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">Email Address</label>
-                            <motion.input whileFocus={{ scale: 1.02 }} className="w-full p-3 rounded-xl bg-white/50 dark:bg-gray-800/50 border border-white/20 dark:border-gray-700/20 backdrop-blur-sm" defaultValue={clientData.email} />
+                          <div>
+                            <label className="text-sm text-gray-600 dark:text-gray-400">Email Address</label>
+                            <input defaultValue={clientData.email} className="mt-1 w-full bg-transparent border border-border rounded-md px-3 py-2 text-sm" />
                           </div>
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">Phone Number</label>
-                            <motion.input whileFocus={{ scale: 1.02 }} className="w-full p-3 rounded-xl bg-white/50 dark:bg-gray-800/50 border border-white/20 dark:border-gray-700/20 backdrop-blur-sm" defaultValue={clientData.phone} />
+                          <div>
+                            <label className="text-sm text-gray-600 dark:text-gray-400">Phone Number</label>
+                            <input defaultValue={clientData.phone} className="mt-1 w-full bg-transparent border border-border rounded-md px-3 py-2 text-sm" />
                           </div>
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">Nationality</label>
-                            <motion.select whileFocus={{ scale: 1.02 }} className="w-full p-3 rounded-xl bg-white/50 dark:bg-gray-800/50 border border-white/20 dark:border-gray-700/20 backdrop-blur-sm">
+                          <div>
+                            <label className="text-sm text-gray-600 dark:text-gray-400">Nationality</label>
+                            <select defaultValue="United States" className="mt-1 w-full bg-transparent border border-border rounded-md px-3 py-2 text-sm">
                               <option>United States</option>
-                              <option>Canada</option>
+                              <option>Ethiopia</option>
                               <option>United Kingdom</option>
-                              <option>Other</option>
-                            </motion.select>
+                              <option>Canada</option>
+                            </select>
                           </div>
                         </div>
-                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                          <Button className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"><CheckCircle className="w-4 h-4 mr-2" />Save Changes</Button>
-                        </motion.div>
+                        <div className="mt-5">
+                          <Button className="bg-gradient-to-r from-green-500 to-emerald-500"><CheckCircle className="w-4 h-4 mr-2" />Save Changes</Button>
+                        </div>
                       </CardContent>
                     </Card>
                   </motion.div>
                 </div>
-              </TabsContent>
+              </div>
+            )}
 
-              <TabsContent value="settings" className="space-y-6">
+            {selectedTab === "settings" && (
+              <div className="space-y-6">
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
                   <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent mb-2">Settings & Preferences</h2>
                   <p className="text-gray-600 dark:text-gray-400">Customize your account and notification preferences</p>
@@ -873,44 +857,49 @@ export function ClientDashboard({
                     <Card className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl">
                       <CardHeader>
                         <CardTitle className="flex items-center space-x-2"><Bell className="w-5 h-5 text-primary" /><span>Notifications</span></CardTitle>
+                        <CardDescription>Control how we notify you</CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                        {[{ label: "Email notifications", description: "Receive updates via email" }, { label: "SMS notifications", description: "Get text message alerts" }, { label: "Application updates", description: "Status change notifications" }, { label: "Marketing emails", description: "Promotional content and offers" }].map((setting, index) => (
-                          <motion.div key={index} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 * index }} className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-white/50 to-gray-50/50 dark:from-gray-800/50 dark:to-gray-700/50">
-                            <div>
-                              <p className="font-medium">{setting.label}</p>
-                              <p className="text-sm text-gray-600 dark:text-gray-400">{setting.description}</p>
-                            </div>
-                            <motion.input whileHover={{ scale: 1.1 }} type="checkbox" className="w-4 h-4" defaultChecked={index < 2} />
+                        <div className="flex items-center justify-between">
+                          <span>Email Notifications</span>
+                          <Switch defaultChecked />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>SMS Alerts</span>
+                          <Switch />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Marketing Emails</span>
+                          <Switch />
+                        </div>
+                        <div className="pt-4 space-y-2">
+                          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                            <Button variant="outline" className="w-full justify-start"><Shield className="w-4 h-4 mr-2" />Privacy Settings</Button>
                           </motion.div>
-                        ))}
+                          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                            <Button variant="outline" className="w-full justify-start text-red-600 hover:text-red-700"><Trash2 className="w-4 h-4 mr-2" />Delete Account</Button>
+                          </motion.div>
+                        </div>
                       </CardContent>
                     </Card>
                   </motion.div>
-
-                  <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
+                  <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }}>
                     <Card className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl">
                       <CardHeader>
-                        <CardTitle className="flex items-center space-x-2"><Shield className="w-5 h-5 text-primary" /><span>Security</span></CardTitle>
+                        <CardTitle className="flex items-center space-x-2"><KeyRound className="w-5 h-5 text-primary" /><span>Security</span></CardTitle>
+                        <CardDescription>Keep your account protected</CardDescription>
                       </CardHeader>
-                      <CardContent className="space-y-4">
-                        <motion.div whileHover={{ scale: 1.02 }}>
-                          <Button variant="outline" className="w-full justify-start"><KeyRound className="w-4 h-4 mr-2" />Change Password</Button>
-                        </motion.div>
-                        <motion.div whileHover={{ scale: 1.02 }}>
-                          <Button variant="outline" className="w-full justify-start"><Shield className="w-4 h-4 mr-2" />Two-Factor Authentication</Button>
-                        </motion.div>
-                        <motion.div whileHover={{ scale: 1.02 }}>
-                          <Button variant="outline" className="w-full justify-start"><Download className="w-4 h-4 mr-2" />Download My Data</Button>
-                        </motion.div>
-                        <motion.div whileHover={{ scale: 1.02 }}>
-                          <Button variant="outline" className="w-full justify-start text-red-600 hover:text-red-700"><Trash2 className="w-4 h-4 mr-2" />Delete Account</Button>
-                        </motion.div>
+                      <CardContent className="space-y-3">
+                        <Button variant="outline" className="w-full justify-between"><span>Change Password</span><KeyRound className="w-4 h-4" /></Button>
+                        <Button variant="outline" className="w-full justify-between"><span>Two-Factor Authentication</span><Shield className="w-4 h-4" /></Button>
+                        <Button variant="outline" className="w-full justify-between"><span>Download My Data</span><Download className="w-4 h-4" /></Button>
+                        <Button variant="outline" className="w-full justify-between text-red-600 hover:text-red-700"><span>Delete Account</span><Trash2 className="w-4 h-4" /></Button>
                       </CardContent>
                     </Card>
                   </motion.div>
                 </div>
-              </TabsContent>
+              </div>
+            )}
 
               <Dialog open={messagesOpen} onOpenChange={setMessagesOpen}>
                 <DialogContent className="max-w-lg">
@@ -945,7 +934,6 @@ export function ClientDashboard({
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
-            </Tabs>
           </div>
         </div>
       </div>

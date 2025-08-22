@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from './button';
 import { Moon, Sun, Globe, Menu, X, User, LogOut } from 'lucide-react';
+
 import { Avatar } from './avatar';
 import { useAuth } from '../lib/auth';
 
@@ -135,7 +136,7 @@ export function Header({ currentPage, onPageChange, theme, onThemeChange }: Head
           </div>
         </div>
 
-        {/* Mobile Navigation */}
+        {/* Mobile Navigation - Simple dropdown */}
         {mobileMenuOpen && (
           <div className="md:hidden py-4 border-t border-border">
             <div className="flex flex-col space-y-3">

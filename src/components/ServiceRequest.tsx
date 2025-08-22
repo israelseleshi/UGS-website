@@ -828,8 +828,9 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
   };
 
   return (
-    <div className="min-h-screen no-hscroll bg-gradient-to-br from-red-50 via-background to-orange-50/30 dark:from-red-950/10 dark:via-background dark:to-orange-950/5">
-      <div className="site-container site-max py-8">
+    <div className="min-h-[100svh] no-hscroll bg-gradient-to-br from-red-50 via-background to-orange-50/30 dark:from-red-950/10 dark:via-background dark:to-orange-950/5 flex flex-col">
+      <div className="flex-1 overflow-y-auto scroll-y-touch">
+        <div className="site-container site-max py-8">
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl md:text-4xl font-bold mb-2">Visa Service Request</h1>
@@ -896,6 +897,7 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
             </CardContent>
           </Card>
         </div>
+      </div>
       </div>
     </div>
   );

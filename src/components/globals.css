@@ -385,6 +385,17 @@ html {
     overflow-x: hidden !important;
     width: 100%;
   }
+
+  /* Smooth scrolling on iOS for overflow containers */
+  .scroll-y-touch {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  /* Optional helper: safe viewport height */
+  .vh-safe {
+    min-height: 100svh;
+  }
 }
 
 /* ==========================================

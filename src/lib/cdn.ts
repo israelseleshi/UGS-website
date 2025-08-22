@@ -2,6 +2,7 @@
 // Supports both public IDs and remote image fetches
 
 const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME as string | undefined;
+const ENABLE_FETCH = (import.meta.env.VITE_CLOUDINARY_ENABLE_FETCH as string | undefined)?.toLowerCase() !== 'false';
 
 export type CldOptions = {
   w?: number;
@@ -25,7 +26,9 @@ function buildTransform({ w, h, q, f, c, g }: CldOptions = {}): string {
 
 // Generate a Cloudinary "image/fetch" URL for a remote image URL
 export function cldFetch(remoteUrl: string, opts: CldOptions = {}): string {
-  if (!CLOUD_NAME) return remoteUrl; // graceful fallback if not configured
+  // If Cloudinary is not configured, or fetch is disabled, or source is Unsplash, return original URL
+  const isUnsplash = /(^https?:\/\/)?images\.unsplash\.com\//i.test(remoteUrl);
+  if (!CLOUD_NAME || !ENABLE_FETCH || isUnsplash) return remoteUrl;
   const t = buildTransform({ f: 'auto', q: 'auto', ...opts });
   const encoded = encodeURIComponent(remoteUrl);
   const transform = t ? `${t}/` : '';

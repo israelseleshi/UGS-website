@@ -84,65 +84,64 @@ export function MobileSidebar({
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop (kept for fade layering under the full-screen overlay) */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 mobile-backdrop-blur z-40 lg:hidden"
+            className="fixed inset-0 bg-black/60 mobile-backdrop-blur z-40 lg:hidden"
             onClick={onClose}
           />
         )}
       </AnimatePresence>
 
-      {/* Sidebar */}
+      {/* Sidebar (full-screen menu) */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ x: '-100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '-100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed left-0 top-0 h-full w-80 max-w-[85vw] bg-white/95 dark:bg-gray-950/95 mobile-backdrop-blur border-r border-white/20 dark:border-gray-800/20 shadow-2xl z-50 lg:hidden"
+            initial={{ x: -20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: -20, opacity: 0 }}
+            transition={{ type: 'spring', damping: 24, stiffness: 200 }}
+            className="fixed inset-0 h-full w-full z-50 lg:hidden pointer-events-none"
           >
-            <div className="flex flex-col h-full">
-              {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-white/20 dark:border-gray-800/20">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-red-500 via-pink-500 to-orange-500 rounded-xl flex items-center justify-center shadow-lg">
-                    <Globe className="w-6 h-6 text-white" />
+            {/* Drawer panel */}
+            <div className="pointer-events-auto absolute left-0 top-0 h-full w-[320px] sm:w-[360px] shadow-2xl ring-1 ring-black/10 dark:ring-white/10 overflow-hidden rounded-none">
+              <div className="flex flex-col h-full bg-white/95 text-gray-900 dark:bg-gray-900/95 dark:text-white mobile-backdrop-blur">
+                {/* Header */}
+                <div className="flex items-center justify-between p-6 border-b border-black/10 dark:border-white/10 bg-white/80 dark:bg-gray-900/80 backdrop-blur">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-red-500 via-pink-500 to-orange-500 rounded-xl flex items-center justify-center shadow-lg ring-1 ring-white/20">
+                      <Globe className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h1 className="text-lg font-bold">
+                        {isAdmin ? 'UGS Admin' : 'UGS Client Portal'}
+                      </h1>
+                      <p className="text-xs text-gray-500 dark:text-gray-300">
+                        {isAdmin ? 'Control Center' : 'Premium Dashboard'}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h1 className="text-lg font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                      {isAdmin ? 'UGS Admin' : 'UGS Client Portal'}
-                    </h1>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {isAdmin ? 'Control Center' : 'Premium Dashboard'}
-                    </p>
-                  </div>
+                  <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={onClose}
+                      className="w-9 h-9 p-0 text-gray-700 hover:bg-black/5 dark:text-white dark:hover:bg-white/10"
+                    >
+                      <X className="w-5 h-5" />
+                    </Button>
+                  </motion.div>
                 </div>
-                <motion.div
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onClose}
-                    className="w-9 h-9 p-0"
-                  >
-                    <X className="w-5 h-5" />
-                  </Button>
-                </motion.div>
-              </div>
 
               {/* User Profile Section */}
               {userData && (
-                <div className="p-6 border-b border-white/20 dark:border-gray-800/20">
+                <div className="p-6 border-b border-black/10 dark:border-white/10">
                   <div className="flex items-center space-x-4">
-                    <Avatar className="w-12 h-12 ring-2 ring-gradient-to-r from-red-500 to-pink-500">
+                    <Avatar className="w-12 h-12 ring-2 ring-black/10 dark:ring-white/20">
                       {userData.avatar ? (
                         <AvatarImage src={userData.avatar} alt={userData.name} />
                       ) : null}
@@ -157,18 +156,18 @@ export function MobileSidebar({
                       <h3 className="font-semibold text-sm truncate">
                         {userData.name}
                       </h3>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                      <p className="text-xs text-gray-500 dark:text-gray-300 truncate">
                         {userData.email}
                       </p>
                       <div className="flex items-center space-x-2 mt-1">
                         {isAdmin ? (
-                          <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs">
+                          <Badge className="bg-black/10 text-gray-900 dark:bg-white/10 dark:text-white text-xs">
                             Admin
                           </Badge>
                         ) : (
                           <>
-                            <Crown className="w-3 h-3 text-yellow-500" />
-                            <span className="text-xs font-medium text-primary">
+                            <Crown className="w-3 h-3 text-yellow-300" />
+                            <span className="text-xs font-medium">
                               {userData.status}
                             </span>
                           </>
@@ -191,37 +190,31 @@ export function MobileSidebar({
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
-                                             <Button
-                         variant={selectedTab === tab.value ? "default" : "ghost"}
-                         className={`w-full justify-start h-auto p-4 rounded-xl transition-all duration-300 mobile-touch-target ${
-                           selectedTab === tab.value
-                             ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-lg'
-                             : 'hover:bg-white/50 dark:hover:bg-gray-800/50'
-                         }`}
-                         onClick={() => {
-                           onTabChange(tab.value);
-                           onClose();
-                         }}
-                       >
+                      <Button
+                        variant={"ghost"}
+                        className={`w-full justify-start h-auto p-4 rounded-xl transition-all duration-300 mobile-touch-target border ${
+                          selectedTab === tab.value
+                            ? 'border-transparent bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-lg'
+                            : 'border-black/10 bg-transparent text-gray-900 hover:bg-black/5 dark:border-white/10 dark:text-white dark:hover:bg-white/10'
+                        }`}
+                        onClick={() => {
+                          onTabChange(tab.value);
+                          onClose();
+                        }}
+                      >
                         <div className="flex items-center space-x-3 w-full">
-                          <tab.icon className={`w-5 h-5 ${
-                            selectedTab === tab.value ? 'text-white' : 'text-gray-600 dark:text-gray-400'
-                          }`} />
+                          <tab.icon className={`w-5 h-5 ${selectedTab === tab.value ? 'text-white' : 'text-gray-900 dark:text-white'}`} />
                           <div className="flex-1 text-left">
                             <div className="flex items-center space-x-2">
-                              <span className="font-medium">{tab.label}</span>
+                              <span className={`font-medium ${selectedTab === tab.value ? 'text-white' : ''}`}>{tab.label}</span>
                               {tab.badge && (
-                                <Badge className="bg-white/20 text-white text-xs">
+                                <Badge className={`${selectedTab === tab.value ? 'bg-white/20 text-white' : 'bg-black/10 text-gray-900 dark:bg-white/20 dark:text-white'} text-xs`}>
                                   {tab.badge}
                                 </Badge>
                               )}
                             </div>
                             {tab.description && (
-                              <p className={`text-xs mt-1 ${
-                                selectedTab === tab.value 
-                                  ? 'text-white/80' 
-                                  : 'text-gray-500 dark:text-gray-400'
-                              }`}>
+                              <p className={`text-xs mt-1 ${selectedTab === tab.value ? 'text-white/90' : 'text-gray-600 dark:text-white/80'}`}>
                                 {tab.description}
                               </p>
                             )}
@@ -234,7 +227,7 @@ export function MobileSidebar({
               </div>
 
               {/* Footer Actions */}
-              <div className="p-4 border-t border-white/20 dark:border-gray-800/20 space-y-2">
+              <div className="p-4 border-t border-black/10 dark:border-white/10 space-y-2 bg-white/70 dark:bg-gray-900/70 backdrop-blur">
                 {onLogout && (
                   <motion.div
                     whileHover={{ scale: 1.02 }}
@@ -242,19 +235,22 @@ export function MobileSidebar({
                   >
                     <Button
                       variant="ghost"
-                      className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 mobile-touch-target"
+                      className="w-full justify-start mobile-touch-target text-gray-900 hover:bg-black/5 dark:text-white dark:hover:bg-white/10"
                       onClick={() => {
                         onLogout();
                         onClose();
                       }}
                     >
-                      <LogOut className="w-4 h-4 mr-3" />
-                      Logout
+                      <LogOut className="w-5 h-5 mr-3" />
+                      Sign Out
                     </Button>
                   </motion.div>
                 )}
               </div>
+              </div>
             </div>
+            {/* Transparent right-side area to close on click */}
+            <div className="pointer-events-auto absolute left-[320px] sm:left-[360px] right-0 top-0 bottom-0" onClick={onClose} />
           </motion.div>
         )}
       </AnimatePresence>

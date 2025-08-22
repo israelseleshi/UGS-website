@@ -43,6 +43,36 @@ export type AppMessage = {
   createdAt?: any;
 };
 
+// Direct (global) messages stored at top-level `messages` collection
+export type DirectMessage = AppMessage & {
+  userId: string; // Client user UID this thread belongs to
+};
+
+// Add a message in the top-level messages collection for a given user
+export async function sendDirectMessage(userId: string, msg: { text: string; byUid: string; byRole?: 'admin' | 'user' }) {
+  const ref = collection(getDb(), 'messages');
+  const docRef = await addDoc(ref, { userId, ...msg, createdAt: serverTimestamp() });
+  const snap = await getDoc(docRef);
+  return { id: docRef.id, ...(snap.data() as DirectMessage) };
+}
+
+// Real-time subscribe to direct messages for a given user
+export function subscribeDirectMessages(
+  userId: string,
+  cb: (items: (DirectMessage & { id: string })[]) => void,
+) {
+  const q = query(
+    collection(getDb(), 'messages'),
+    where('userId', '==', userId),
+    orderBy('createdAt', 'asc')
+  );
+  const unsub = onSnapshot(q, (snap) => {
+    const items = snap.docs.map(d => ({ id: d.id, ...(d.data() as DirectMessage) }));
+    cb(items);
+  });
+  return unsub;
+}
+
 export async function listApplicationMessages(appId: string, pageSize = 50, cursor?: QueryDocumentSnapshot) {
   const base = query(
     collection(getDb(), 'visaApplications', appId, 'messages'),
@@ -356,4 +386,30 @@ export async function submitVisaApplication(applicationData: Partial<VisaApplica
     updatedAt: serverTimestamp()
   });
   return docRef.id;
+}
+
+// --- Admin Maintenance ---
+// Wipe all documents from the provided collections except seed docs.
+// Preserves:
+// - Any doc with id "_seed"
+// - For settings: preserves doc id "app"
+export async function wipeNonSeedData(collections: string[]) {
+  for (const col of collections) {
+    const snap = await getDocs(collection(getDb(), col));
+    for (const d of snap.docs) {
+      if (d.id === '_seed') continue;
+      if (col === 'settings' && d.id === 'app') continue;
+      try {
+        // Clean known subcollections before deleting parent docs
+        if (col === 'visaApplications') {
+          // Delete nested messages subcollection if present
+          const sub = await getDocs(collection(getDb(), 'visaApplications', d.id, 'messages'));
+          for (const sm of sub.docs) {
+            await deleteDoc(doc(getDb(), 'visaApplications', d.id, 'messages', sm.id));
+          }
+        }
+      } catch {}
+      await deleteDoc(doc(getDb(), col, d.id));
+    }
+  }
 }

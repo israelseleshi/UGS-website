@@ -61,7 +61,25 @@ service cloud.firestore {
           return get(/databases/$(database)/documents/visaApplications/$(appId)).data.uid == request.auth.uid;
         }
         allow read: if isAdmin() || (isVerified() && appOwner());
-        allow create: if isAdmin() || (isVerified() && appOwner());
+        // Only the application owner (client) or an admin may create a message.
+        // Validate message schema and sender identity/role.
+        allow create: if (
+          // Admin sending to client
+          isAdmin() &&
+          request.resource.data.byUid == request.auth.uid &&
+          request.resource.data.byRole == 'admin' &&
+          request.resource.data.text is string &&
+          request.resource.data.text.size() > 0 &&
+          request.resource.data.keys().hasOnly(['text','byUid','byRole','createdAt'])
+        ) || (
+          // Client (owner) sending to admin
+          isVerified() && appOwner() &&
+          request.resource.data.byUid == request.auth.uid &&
+          request.resource.data.byRole == 'user' &&
+          request.resource.data.text is string &&
+          request.resource.data.text.size() > 0 &&
+          request.resource.data.keys().hasOnly(['text','byUid','byRole','createdAt'])
+        );
         // No updates to messages after write to preserve audit; allow delete by admin only
         allow update: if false;
         allow delete: if isAdmin();
