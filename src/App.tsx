@@ -1,16 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { getTheme as readTheme, setTheme as writeTheme, toggleTheme as flipTheme, type AppTheme } from './components/theme';
 import { motion, AnimatePresence } from 'motion/react';
 import { Header } from './components/Header';
-import { HomePage } from './components/HomePage';
-import { AuthPages } from './components/AuthPages';
-import { VisaEdPage } from './components/VisaEdPage';
-import { AllenAI } from './components/AllenAI';
-import { ServiceRequest } from './components/ServiceRequest';
-import { AdminDashboard } from './components/AdminDashboard';
-import { ClientDashboard } from './components/ClientDashboard';
-import { VerifyEmail } from './components/VerifyEmail';
-import { CourseDetailsPage } from './components/CourseDetailsPage';
 import { Card, CardContent, CardHeader, CardTitle } from './components/card';
 import { Button } from './components/button';
 import { ImageWithFallback } from './components/ImageWithFallback';
@@ -28,6 +19,18 @@ import {
 import { useAuth } from './lib/auth';
 import { Toaster } from 'sonner';
 import { ensureBaseCollections } from './lib/db';
+import { cldFetch } from './lib/cdn';
+
+// Lazy-loaded pages/components to reduce initial bundle size
+const HomePage = lazy(() => import('./components/HomePage').then(m => ({ default: m.HomePage })));
+const AuthPages = lazy(() => import('./components/AuthPages').then(m => ({ default: m.AuthPages })));
+const VisaEdPage = lazy(() => import('./components/VisaEdPage').then(m => ({ default: m.VisaEdPage })));
+const AllenAI = lazy(() => import('./components/AllenAI').then(m => ({ default: m.AllenAI })));
+const ServiceRequest = lazy(() => import('./components/ServiceRequest').then(m => ({ default: m.ServiceRequest })));
+const AdminDashboard = lazy(() => import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
+const ClientDashboard = lazy(() => import('./components/ClientDashboard').then(m => ({ default: m.ClientDashboard })));
+const VerifyEmail = lazy(() => import('./components/VerifyEmail').then(m => ({ default: m.VerifyEmail })));
+const CourseDetailsPage = lazy(() => import('./components/CourseDetailsPage').then(m => ({ default: m.CourseDetailsPage })));
 
 // Basic error boundary to surface runtime errors instead of a blank screen
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { error: any }> {
@@ -344,9 +347,12 @@ export default function App() {
                   >
                     <div className="relative overflow-hidden rounded-3xl shadow-2xl ring-1 ring-border/40 bg-card">
                       <ImageWithFallback
-                        src={service.image}
+                        src={cldFetch(service.image, { w: 1200 })}
+                        fallbackSrc={service.image}
                         alt={service.title}
                         className="w-full h-80 lg:h-[420px] object-cover"
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/15 to-transparent" />
                     </div>
@@ -569,7 +575,15 @@ export default function App() {
         )}
         <main className="relative">
           <div className={isDashboardPage ? "px-6 sm:px-8 lg:px-12 xl:px-16 2xl:px-24" : "px-0"}>
-          {renderPage()}
+            <Suspense
+              fallback={
+                <div className="min-h-[40vh] flex items-center justify-center">
+                  <div className="animate-spin h-6 w-6 rounded-full border-2 border-primary border-t-transparent" aria-label="Loading" />
+                </div>
+              }
+            >
+              {renderPage()}
+            </Suspense>
           </div>
         </main>
         <Toaster richColors position="top-center" />

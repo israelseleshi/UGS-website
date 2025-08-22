@@ -242,7 +242,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                           id="email"
                           type="email"
                           placeholder="you@company.com"
-                          className="pl-10 bg-transparent border-0 border-b border-black/10 dark:border-white/10 rounded-none focus-visible:ring-0"
+                          className="pl-10 bg-transparent border-0 border-b rounded-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary border-gray-400 dark:border-gray-600"
                           value={formData.email}
                           onChange={(e) => handleInputChange('email', e.target.value)}
                           required
@@ -258,7 +258,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                           id="password"
                           type={showPassword ? 'text' : 'password'}
                           placeholder="••••••••"
-                          className="pl-10 pr-10 bg-transparent border-0 border-b border-black/10 dark:border-white/10 rounded-none focus-visible:ring-0"
+                          className="pl-10 pr-10 bg-transparent border-0 border-b rounded-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary border-gray-400 dark:border-gray-600"
                           value={formData.password}
                           onChange={(e) => handleInputChange('password', e.target.value)}
                           required
@@ -290,7 +290,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                           <Input
                             id="firstName"
                             placeholder="John"
-                            className="pl-10 bg-transparent border-0 border-b border-black/10 dark:border-white/10 rounded-none focus-visible:ring-0"
+                            className="pl-10 bg-transparent border-0 border-b rounded-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary border-gray-400 dark:border-gray-600"
                             value={formData.firstName}
                             onChange={(e) => handleInputChange('firstName', e.target.value)}
                             required
@@ -304,7 +304,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                           <Input
                             id="lastName"
                             placeholder="Doe"
-                            className="pl-10 bg-transparent border-0 border-b border-black/10 dark:border-white/10 rounded-none focus-visible:ring-0"
+                            className="pl-10 bg-transparent border-0 border-b rounded-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary border-gray-400 dark:border-gray-600"
                             value={formData.lastName}
                             onChange={(e) => handleInputChange('lastName', e.target.value)}
                             required
@@ -322,7 +322,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                           id="email"
                           type="email"
                           placeholder="you@company.com"
-                          className="pl-10 bg-transparent border-0 border-b border-black/10 dark:border-white/10 rounded-none focus-visible:ring-0"
+                          className="pl-10 bg-transparent border-0 border-b rounded-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary border-gray-400 dark:border-gray-600"
                           value={formData.email}
                           onChange={(e) => handleInputChange('email', e.target.value)}
                           required
@@ -339,7 +339,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                           id="password"
                           type={showPassword ? 'text' : 'password'}
                           placeholder="••••••••"
-                          className="pl-10 pr-10 bg-transparent border-0 border-b border-black/10 dark:border-white/10 rounded-none focus-visible:ring-0"
+                          className="pl-10 pr-10 bg-transparent border-0 border-b rounded-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary border-gray-400 dark:border-gray-600"
                           value={formData.password}
                           onChange={(e) => handleInputChange('password', e.target.value)}
                           required
@@ -359,7 +359,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                           id="confirmPassword"
                           type={showConfirmPassword ? 'text' : 'password'}
                           placeholder="••••••••"
-                          className="pl-10 pr-10 bg-transparent border-0 border-b border-black/10 dark:border-white/10 rounded-none focus-visible:ring-0"
+                          className="pl-10 pr-10 bg-transparent border-0 border-b rounded-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary border-gray-400 dark:border-gray-600"
                           value={formData.confirmPassword}
                           onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
                           required
@@ -379,7 +379,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                           id="phone"
                           type="tel"
                           placeholder="+1 (555) 000-0000"
-                          className="pl-10 bg-transparent border-0 border-b border-black/10 dark:border-white/10 rounded-none focus-visible:ring-0"
+                          className="pl-10 bg-transparent border-0 border-b rounded-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary border-gray-400 dark:border-gray-600"
                           value={formData.phone}
                           onChange={(e) => handleInputChange('phone', e.target.value)}
                         />
@@ -536,7 +536,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                   id="forgotEmail"
                   type="email"
                   placeholder="you@company.com"
-                  className="pl-10 bg-transparent"
+                  className="pl-10 bg-transparent border border-gray-400 dark:border-gray-600 rounded-md focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary"
                   value={forgotEmail}
                   onChange={(e) => { setForgotEmail(e.target.value); setLoginError(''); setForgotMessage(''); }}
                 />

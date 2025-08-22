@@ -28,6 +28,10 @@ import {
 import { useAuth } from '../lib/auth';
 import { submitVisaApplication } from '../lib/db';
 import { toast } from 'sonner';
+import { AspectRatio } from './aspect-ratio';
+import { ImageWithFallback } from './ImageWithFallback';
+import { Skeleton } from './skeleton';
+import { cldFetch } from '../lib/cdn';
 
 interface ServiceRequestProps {
   onPageChange: (page: string) => void;
@@ -37,6 +41,7 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
   const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imagesLoaded, setImagesLoaded] = useState(0);
   const [formData, setFormData] = useState({
     // Personal Information
     firstName: '',
@@ -187,46 +192,54 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
     { 
       id: 'tourist', 
       title: 'Tourist Visa', 
-      price: 'From $199', 
+      price: 'From ETB 199', 
       time: '5-10 days',
-      description: 'For leisure and tourism purposes'
+      description: 'For leisure and tourism purposes',
+      image: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=1200&auto=format&fit=crop'
     },
     { 
       id: 'business', 
       title: 'Business Visa', 
-      price: 'From $299', 
+      price: 'From ETB 299', 
       time: '7-15 days',
-      description: 'For business meetings and conferences'
+      description: 'For business meetings and conferences',
+      image: 'https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?q=80&w=1200&auto=format&fit=crop'
     },
     { 
       id: 'student', 
       title: 'Student Visa', 
-      price: 'From $499', 
+      price: 'From ETB 499', 
       time: '2-8 weeks',
-      description: 'For educational purposes'
+      description: 'For educational purposes',
+      image: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?q=80&w=1200&auto=format&fit=crop'
     },
     { 
       id: 'work', 
       title: 'Work Visa', 
-      price: 'From $799', 
+      price: 'From ETB 799', 
       time: '4-12 weeks',
-      description: 'For employment opportunities'
+      description: 'For employment opportunities',
+      image: 'https://images.unsplash.com/photo-1521791136064-7986c2920216?q=80&w=1200&auto=format&fit=crop'
     },
     { 
       id: 'immigration', 
       title: 'Immigration Services', 
-      price: 'From $1299', 
+      price: 'From ETB 1299', 
       time: '6+ months',
-      description: 'For permanent residency'
+      description: 'For permanent residency',
+      image: 'https://images.unsplash.com/photo-1483728642387-6c3bdd6c93e5?q=80&w=1200&auto=format&fit=crop'
     },
     { 
       id: 'other', 
       title: 'Other Services', 
       price: 'Custom Quote', 
       time: 'Varies',
-      description: 'Specialized visa services'
+      description: 'Specialized visa services',
+      image: 'https://images.unsplash.com/photo-1496302662116-35cc4f36df92?q=80&w=1200&auto=format&fit=crop'
     }
   ];
+
+  const allImagesLoaded = imagesLoaded >= services.length;
 
   const renderStepContent = () => {
     switch (currentStep) {
@@ -238,7 +251,34 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
               <p className="text-muted-foreground">Choose the visa service that best fits your needs</p>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {!allImagesLoaded && (
+                <>
+                  {[...Array(4)].map((_, i) => (
+                    <Card key={`sk-${i}`} className="overflow-hidden">
+                      <CardContent className="p-6">
+                        <div className="relative mb-5">
+                          <div className="absolute -top-3 -left-3 h-24 w-32 md:h-28 md:w-40 rounded-2xl rotate-[-6deg] bg-indigo-600/20 dark:bg-indigo-500/15 blur-[1px]" aria-hidden="true"></div>
+                          <div className="absolute -bottom-3 -right-3 h-24 w-32 md:h-28 md:w-40 rounded-2xl rotate-[8deg] bg-blue-600/20 dark:bg-blue-500/15" aria-hidden="true"></div>
+                          <div className="relative rounded-2xl overflow-hidden">
+                            <AspectRatio ratio={16/9}>
+                              <Skeleton className="h-full w-full" />
+                            </AspectRatio>
+                          </div>
+                        </div>
+                        <div className="space-y-3">
+                          <Skeleton className="h-5 w-1/2" />
+                          <Skeleton className="h-4 w-3/4" />
+                          <div className="flex items-center justify-between pt-1">
+                            <Skeleton className="h-6 w-24" />
+                            <Skeleton className="h-6 w-24" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </>
+              )}
               {services.map((service) => (
                 <Card 
                   key={service.id}
@@ -250,6 +290,29 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
                   onClick={() => handleInputChange('serviceType', service.id)}
                 >
                   <CardContent className="p-6">
+                    {/* Visual banner with decorative background shapes */}
+                    <div className="relative mb-5">
+                      {/* background shape 1 */}
+                      <div className="absolute -top-3 -left-3 h-24 w-32 md:h-28 md:w-40 rounded-2xl rotate-[-6deg] bg-indigo-600/20 dark:bg-indigo-500/15 blur-[1px]" aria-hidden="true"></div>
+                      {/* background shape 2 */}
+                      <div className="absolute -bottom-3 -right-3 h-24 w-32 md:h-28 md:w-40 rounded-2xl rotate-[8deg] bg-blue-600/20 dark:bg-blue-500/15" aria-hidden="true"></div>
+
+                      <div className="relative rounded-2xl overflow-hidden shadow-sm ring-1 ring-black/5 dark:ring-white/5">
+                        <AspectRatio ratio={16/9}>
+                          <ImageWithFallback
+                            src={cldFetch(service.image, { w: 1200 })}
+                            fallbackSrc={service.image}
+                            alt={`${service.title} illustrative image`}
+                            className="h-full w-full object-cover"
+                            loading="lazy"
+                            referrerPolicy="no-referrer"
+                            onLoad={() => setImagesLoaded((n) => n + 1)}
+                            onError={() => setImagesLoaded((n) => n + 1)}
+                          />
+                        </AspectRatio>
+                      </div>
+                    </div>
+
                     <div className="flex items-start justify-between mb-4">
                       <div>
                         <h3 className="font-semibold text-lg">{service.title}</h3>
@@ -377,6 +440,7 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
                     <SelectItem value="us">United States</SelectItem>
                     <SelectItem value="ca">Canada</SelectItem>
                     <SelectItem value="uk">United Kingdom</SelectItem>
+                    <SelectItem value="et">Ethiopia</SelectItem>
                     <SelectItem value="in">India</SelectItem>
                     <SelectItem value="au">Australia</SelectItem>
                     <SelectItem value="other">Other</SelectItem>
@@ -439,6 +503,7 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
                       <SelectItem value="us">United States</SelectItem>
                       <SelectItem value="ca">Canada</SelectItem>
                       <SelectItem value="uk">United Kingdom</SelectItem>
+                      <SelectItem value="et">Ethiopia</SelectItem>
                       <SelectItem value="au">Australia</SelectItem>
                       <SelectItem value="de">Germany</SelectItem>
                       <SelectItem value="fr">France</SelectItem>
@@ -602,7 +667,7 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
                         <p className="text-sm text-muted-foreground">50% faster processing</p>
                       </div>
                     </div>
-                    <Badge variant="outline">+$199</Badge>
+                    <Badge variant="outline">+ETB 199</Badge>
                   </div>
                   <div className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center space-x-3">
@@ -612,7 +677,7 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
                         <p className="text-sm text-muted-foreground">Fastest available processing</p>
                       </div>
                     </div>
-                    <Badge variant="outline">+$399</Badge>
+                    <Badge variant="outline">+ETB 399</Badge>
                   </div>
                 </RadioGroup>
               </CardContent>
@@ -635,7 +700,7 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
                       <p className="text-sm text-muted-foreground">30-minute call with visa specialist</p>
                     </div>
                   </div>
-                  <Badge variant="outline">+$99</Badge>
+                  <Badge variant="outline">+ETB 99</Badge>
                 </div>
                 <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex items-center space-x-3">
@@ -649,7 +714,7 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
                       <p className="text-sm text-muted-foreground">Professional review of all documents</p>
                     </div>
                   </div>
-                  <Badge variant="outline">+$149</Badge>
+                  <Badge variant="outline">+ETB 149</Badge>
                 </div>
               </CardContent>
             </Card>
@@ -678,7 +743,7 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
                 <div className="border-t pt-3 mt-3">
                   <div className="flex justify-between font-semibold">
                     <span>Estimated Total:</span>
-                    <span className="text-primary">$199 - $799+</span>
+                    <span className="text-primary">ETB 199 - ETB 1299+</span>
                   </div>
                 </div>
               </CardContent>

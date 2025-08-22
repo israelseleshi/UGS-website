@@ -306,7 +306,7 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
   const overviewStats = [
     { title: 'Total Applications', value: totalApplications.toString(), change: '+12%', icon: FileText, color: 'text-blue-600' },
     { title: 'Active Users', value: uniqueUsers.toString(), change: '+8%', icon: Users, color: 'text-green-600' },
-    { title: 'Revenue (Est.)', value: `$${totalRevenue.toLocaleString()}`, change: '+23%', icon: DollarSign, color: 'text-purple-600' },
+    { title: 'Revenue (Est.)', value: `ETB ${totalRevenue.toLocaleString()}`, change: '+23%', icon: DollarSign, color: 'text-purple-600' },
     { title: 'Success Rate', value: `${successRate}%`, change: '+2.1%', icon: CheckCircle, color: 'text-emerald-600' }
   ];
 
@@ -363,7 +363,7 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
     country: app.travel?.destination || 'Not specified',
     status: getStatusDisplayName(app.status),
     date: app.createdAt?.toDate?.()?.toISOString()?.slice(0, 10) || 'Unknown',
-    amount: app.estimatedCost ? `$${app.estimatedCost}` : 'TBD',
+    amount: app.estimatedCost ? `ETB ${app.estimatedCost}` : 'TBD',
     email: app.userEmail || app.personalInfo?.email || 'No email',
     priority: app.priority || 'normal'
   }));
@@ -1091,7 +1091,7 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                           <span className="font-medium">{service.success}%</span>
                         </div>
                         <Progress value={service.success} className="h-2" />
-                        <p className="text-xs text-muted-foreground">Revenue: ${service.revenue.toLocaleString()}</p>
+                        <p className="text-xs text-muted-foreground">Revenue: ETB {service.revenue.toLocaleString()}</p>
                       </div>
                     </div>
                   ))}
