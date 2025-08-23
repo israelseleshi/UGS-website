@@ -75,7 +75,7 @@ import {
 } from "lucide-react";
 import { getTheme as readTheme, toggleTheme as flipTheme, type AppTheme } from "./theme";
 import { useAuth } from "../lib/auth";
-import { getUser, listUserApplications, listUserApplicationsByEmail, upsertUser, sendDirectMessage, subscribeDirectMessages, type AppMessage } from "../lib/db";
+import { getUser, listUserApplications, listUserApplicationsByEmail, getVisaApplication, upsertUser, sendDirectMessage, subscribeDirectMessages, type AppMessage, type VisaApplication } from "../lib/db";
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './dialog';
 import { MobileSidebar, MobileMenuButton } from './MobileSidebar';
@@ -133,6 +133,24 @@ export function ClientDashboard({
   });
 
   const [applications, setApplications] = useState<any[]>([]);
+  const [appDetailsOpen, setAppDetailsOpen] = useState(false);
+  const [appDetailsLoading, setAppDetailsLoading] = useState(false);
+  const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
+  const [selectedApp, setSelectedApp] = useState<(VisaApplication & { id: string }) | null>(null);
+
+  async function openAppDetails(appId: string) {
+    try {
+      setSelectedAppId(appId);
+      setAppDetailsOpen(true);
+      setAppDetailsLoading(true);
+      const app = await getVisaApplication(appId);
+      setSelectedApp((app as any) || null);
+    } catch (e: any) {
+      toast?.error?.(e?.message || 'Failed to load application details');
+    } finally {
+      setAppDetailsLoading(false);
+    }
+  }
 
   React.useEffect(() => {
     if (!messagesOpen) {
@@ -371,7 +389,7 @@ export function ClientDashboard({
   return (
     <div className="min-h-screen no-hscroll bg-gradient-to-br from-slate-50 via-white to-blue-50/30 dark:from-slate-950 dark:via-gray-900 dark:to-blue-950/20">
       <div
-        className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 dark:bg-gray-950/80 border-b border-white/20 dark:border-gray-800/50"
+        className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-white/80 dark:bg-gray-950/80 border-b border-white/20 dark:border-gray-800/50"
       >
         <div className="site-container">
           <div className="flex flex-wrap items-center justify-between gap-3 h-20">
@@ -414,12 +432,14 @@ export function ClientDashboard({
           </div>
         </div>
       </div>
+      {/* Spacer to offset fixed header height */}
+      <div className="h-20" />
 
-      {/* Fixed left desktop sidebar; full height with collapse/expand */}
-      <div className="hidden lg:flex fixed left-0 top-20 bottom-0 z-30 items-stretch"
+      {/* Fixed left desktop sidebar; full height with collapse/expand (rendered under sticky header) */}
+      <div className="hidden lg:flex fixed left-0 top-0 bottom-0 z-30 items-stretch"
            onMouseEnter={() => setIsSidebarHovered(true)}
            onMouseLeave={() => setIsSidebarHovered(false)}>
-        <div className={`${(isSidebarCollapsed && !isSidebarHovered) ? 'w-16' : 'w-64'} h-full transition-all duration-300`}>
+        <div className={`${(isSidebarCollapsed && !isSidebarHovered) ? 'w-16' : 'w-64'} h-full transition-all duration-300 pt-4 md:pt-6`}>
           <DesktopSidebar
             items={clientTabs as any}
             selected={selectedTab}
@@ -431,11 +451,12 @@ export function ClientDashboard({
           />
         </div>
       </div>
-
-      <div className="site-container site-max pt-8 pb-12 lg:pt-14 lg:pb-16">
-        <div className="grid grid-cols-12 gap-6">
+      {/* Scrollable content area (only this scrolls) */}
+      <div className="h-[calc(100vh-5rem-1px)] overflow-auto pb-8">
+        <div className="site-container site-max pt-8 pb-12 lg:pt-14 lg:pb-16">
+          <div className="grid grid-cols-12 gap-6">
           {/* Content shifted right for fixed sidebar (dynamic with collapse) */}
-          <div className={`col-span-12 lg:col-span-12 transition-all duration-300 ${ (isSidebarCollapsed && !isSidebarHovered) ? 'lg:pl-16' : 'lg:pl-64' }`}>
+            <div className={`col-span-12 lg:col-span-12 transition-all duration-300 ${ (isSidebarCollapsed && !isSidebarHovered) ? 'lg:pl-16' : 'lg:pl-64' }`}>
             {selectedTab === "overview" && (
               <div className="space-y-8">
                 <div>
@@ -657,7 +678,7 @@ export function ClientDashboard({
                             </div>
                             <div className="flex flex-col space-y-2">
                               <div>
-                                <Button variant="outline" size="sm" className="w-full"><Eye className="w-4 h-4 mr-2" />View Details</Button>
+                                <Button variant="outline" size="sm" className="w-full" onClick={() => openAppDetails(app.id)}><Eye className="w-4 h-4 mr-2" />View Details</Button>
                               </div>
                               <div>
                                 <Button variant="outline" size="sm" className="w-full"><Download className="w-4 h-4 mr-2" />Download</Button>
@@ -854,6 +875,107 @@ export function ClientDashboard({
               </div>
             )}
 
+              <Dialog open={appDetailsOpen} onOpenChange={(v) => { setAppDetailsOpen(v); if (!v) { setSelectedApp(null); setSelectedAppId(null); } }}>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Application Details</DialogTitle>
+                    <DialogDescription>Review your visa application information.</DialogDescription>
+                  </DialogHeader>
+                  {appDetailsLoading ? (
+                    <div className="text-sm text-muted-foreground">Loading application…</div>
+                  ) : !selectedApp ? (
+                    <div className="text-sm text-muted-foreground">No data available.</div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <div className="text-gray-500">Status</div>
+                          <div className="font-medium">{selectedApp.status}</div>
+                        </div>
+                        <div>
+                          <div className="text-gray-500">Priority</div>
+                          <div className="font-medium">{selectedApp.priority || 'normal'}</div>
+                        </div>
+                        <div>
+                          <div className="text-gray-500">Service</div>
+                          <div className="font-medium">{selectedApp.travel?.serviceType || '—'}</div>
+                        </div>
+                        <div>
+                          <div className="text-gray-500">Destination</div>
+                          <div className="font-medium">{selectedApp.travel?.destination || '—'}</div>
+                        </div>
+                        <div>
+                          <div className="text-gray-500">Purpose</div>
+                          <div className="font-medium">{selectedApp.travel?.purpose || '—'}</div>
+                        </div>
+                        <div>
+                          <div className="text-gray-500">Submitted</div>
+                          <div className="font-medium">{(selectedApp as any)?.createdAt?.toDate?.()?.toLocaleString?.() || '—'}</div>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs uppercase tracking-wider text-gray-500 mb-2">Personal Info</div>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <div className="text-gray-500">Name</div>
+                            <div className="font-medium">{`${selectedApp.personalInfo?.firstName || ''} ${selectedApp.personalInfo?.lastName || ''}`.trim() || '—'}</div>
+                          </div>
+                          <div>
+                            <div className="text-gray-500">Email</div>
+                            <div className="font-medium">{selectedApp.personalInfo?.email || selectedApp.userEmail || '—'}</div>
+                          </div>
+                          <div>
+                            <div className="text-gray-500">Phone</div>
+                            <div className="font-medium">{selectedApp.personalInfo?.phone || '—'}</div>
+                          </div>
+                          <div>
+                            <div className="text-gray-500">Nationality</div>
+                            <div className="font-medium">{selectedApp.personalInfo?.nationality || '—'}</div>
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs uppercase tracking-wider text-gray-500 mb-2">Travel</div>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <div className="text-gray-500">Travel Date</div>
+                            <div className="font-medium">{selectedApp.travel?.travelDate || '—'}</div>
+                          </div>
+                          <div>
+                            <div className="text-gray-500">Return Date</div>
+                            <div className="font-medium">{selectedApp.travel?.returnDate || '—'}</div>
+                          </div>
+                          <div className="col-span-2">
+                            <div className="text-gray-500">Accommodation</div>
+                            <div className="font-medium">{selectedApp.travel?.accommodation || '—'}</div>
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs uppercase tracking-wider text-gray-500 mb-2">Additional Info</div>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <div className="text-gray-500">Emergency Contact</div>
+                            <div className="font-medium">{selectedApp.additionalInfo?.emergencyContact || '—'}</div>
+                          </div>
+                          <div>
+                            <div className="text-gray-500">Emergency Phone</div>
+                            <div className="font-medium">{selectedApp.additionalInfo?.emergencyPhone || '—'}</div>
+                          </div>
+                          <div className="col-span-2">
+                            <div className="text-gray-500">Special Requirements</div>
+                            <div className="font-medium">{selectedApp.additionalInfo?.specialRequirements || '—'}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <DialogFooter>
+                    <div className="text-xs text-muted-foreground ml-auto">App ID: {selectedAppId}</div>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
               <Dialog open={messagesOpen} onOpenChange={setMessagesOpen}>
                 <DialogContent className="max-w-lg">
                   <DialogHeader>
@@ -887,6 +1009,8 @@ export function ClientDashboard({
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
+
+            </div>
           </div>
         </div>
       </div>

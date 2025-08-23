@@ -6,7 +6,7 @@ import { Button } from './button';
 import { Badge } from './badge';
 // Removed Tabs UI in favor of sidebar-driven conditional rendering
 // import { Popover, PopoverContent, PopoverTrigger } from './popover';
-import { listAllApplications, getVisaApplication, updateVisaApplication, sendDirectMessage, subscribeDirectMessages, listVisaEdRegistrations, ensureBaseCollections, type VisaApplication, type VisaEdRegistration } from '../lib/db';
+import { listAllApplications, getVisaApplication, updateVisaApplication, sendDirectMessage, subscribeDirectMessages, listVisaEdRegistrations, ensureBaseCollections, listAllUsers, type VisaApplication, type VisaEdRegistration } from '../lib/db';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from './avatar';
 // import { Progress } from './progress';
@@ -76,19 +76,72 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
   const [chatInputByUser, setChatInputByUser] = useState<Record<string, string>>({});
   const [chatPendingByUser, setChatPendingByUser] = useState<Record<string, boolean>>({});
   const chatMessagesUnsub = React.useRef<undefined | (() => void)>(undefined);
-  // Derive unique chat users from applications
-  const chatUsers = React.useMemo(() => {
-    const userMap = new Map<string, { id: string; name: string; email: string; count: number }>();
-    for (const app of applications) {
-      const id = (app.uid || app.userEmail || app.id) as string;
-      const name = `${app.personalInfo?.firstName || ''} ${app.personalInfo?.lastName || ''}`.trim() || 'Unknown';
-      const email = (app.userEmail || app.personalInfo?.email || 'N/A') as string;
-      const prev = userMap.get(id);
-      if (prev) userMap.set(id, { ...prev, count: prev.count + 1 });
-      else userMap.set(id, { id, name, email, count: 1 });
+  // Conversations list: load all users from Firestore (non-admin)
+  const [chatUsers, setChatUsers] = useState<{ id: string; name: string; email: string; photoURL?: string | null; count: number }[]>([]);
+  const [chatSearch, setChatSearch] = useState('');
+  const [chatMetaByUser, setChatMetaByUser] = useState<Record<string, { lastAt?: number; unread?: number }>>({});
+
+  // Helper to load last message metadata and unread counts per user (best-effort; may require composite indexes)
+  const loadUserMeta = React.useCallback(async (uid: string) => {
+    try {
+      const { collection, query, where, orderBy, limit, getDocs } = await import('firebase/firestore');
+      const { db } = await import('../lib/firebase');
+      const q = query(
+        collection(db!, 'messages'),
+        where('userId', '==', uid),
+        orderBy('createdAt', 'desc'),
+        limit(1)
+      );
+      const snap = await getDocs(q);
+      let lastAt: number | undefined = undefined;
+      let unread = 0;
+      const lastSeenKey = `adminLastSeen:${uid}`;
+      const lastSeen = Number(localStorage.getItem(lastSeenKey) || 0);
+      if (!snap.empty) {
+        const d = snap.docs[0].data() as any;
+        const t = d?.createdAt?.toMillis?.() ?? d?.createdAt?.seconds * 1000 ?? 0;
+        lastAt = t || undefined;
+        // Try to count user-authored messages after lastSeen (may need an index). Fallback to 1 if last message is newer and by user.
+        try {
+          const qUnread = query(
+            collection(db!, 'messages'),
+            where('userId', '==', uid),
+            where('byRole', '==', 'user'),
+            where('createdAt', '>', new Date(lastSeen || 0))
+          );
+          const unreadSnap = await getDocs(qUnread);
+          unread = unreadSnap.size;
+        } catch {
+          if (t && t > lastSeen && d?.byRole === 'user') unread = 1; // minimal indicator
+        }
+      }
+      setChatMetaByUser(prev => ({ ...prev, [uid]: { lastAt, unread } }));
+    } catch (e) {
+      // silently ignore if indexes are missing; we still render the list
     }
-    return Array.from(userMap.values());
-  }, [applications]);
+  }, []);
+  React.useEffect(() => {
+    let ignore = false;
+    async function loadUsers() {
+      try {
+        const users = await listAllUsers(500);
+        const rows = users.map(u => ({
+          id: u.uid || (u as any).id,
+          name: (u.fullName || `${u.firstName || ''} ${u.lastName || ''}` || u.email || 'Unknown').toString().trim(),
+          email: (u.email || 'N/A') as string,
+          photoURL: (u as any)?.photoURL ?? null,
+          count: 1,
+        })).filter(u => !!u.id);
+        if (!ignore) setChatUsers(rows);
+        // Best-effort: load last msg meta for ordering and unread badge
+        rows.forEach(r => loadUserMeta(r.id));
+      } catch (e) {
+        console.error('Failed to load users for conversations', e);
+      }
+    }
+    loadUsers();
+    return () => { ignore = true; };
+  }, []);
   // Default selected chat user once users list is available
   React.useEffect(() => {
     if (!selectedChatUserId && chatUsers.length > 0) {
@@ -100,6 +153,12 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
   const [selectedApp, setSelectedApp] = useState<(VisaApplication & { id: string }) | null>(null);
   const { user } = useAuth();
+  const adminUserData = React.useMemo(() => ({
+    name: (user?.displayName || (user?.email ? user.email.split('@')[0] : 'Admin')) as string,
+    email: (user?.email || '') as string,
+    status: 'Admin',
+    avatar: (user?.photoURL || undefined) as string | undefined,
+  }), [user]);
   
   // VisaEd state
   const [visaEdRegs, setVisaEdRegs] = useState<(VisaEdRegistration & { id: string })[]>([]);
@@ -239,10 +298,9 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
 
   // Helper: resolve userId (uid) for a conversation entry
   const getUserIdForChat = React.useCallback((id: string | null) => {
-    if (!id) return null;
-    const match = applications.find(a => a.uid === id) || applications.find(a => a.userEmail === id) || applications.find(a => a.id === id);
-    return match?.uid || null;
-  }, [applications]);
+    // For conversation entries, id is the user's UID
+    return id;
+  }, []);
 
   // Subscribe to direct messages for the active chat user (top-level messages collection)
   React.useEffect(() => {
@@ -371,9 +429,9 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
   ];
 
   return (
-    <div className="min-h-screen bg-background no-hscroll admin-strong-borders">
-      {/* Header */}
-      <div className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 dark:bg-gray-950/80 border-b border-white/20 dark:border-gray-800/50">
+    <div className="min-h-screen overflow-hidden no-hscroll bg-gradient-to-br from-slate-50 via-white to-blue-50/30 dark:from-slate-950 dark:via-gray-900 dark:to-blue-950/20">
+      {/* Fixed Header */}
+      <div className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-white/80 dark:bg-gray-950/80 border-b border-white/20 dark:border-gray-800/50">
         <div className="site-container">
           <div className="flex items-center justify-between h-20">
             <div className="flex items-center space-x-3">
@@ -393,7 +451,6 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                 <div className="w-8 h-8 bg-gradient-to-br from-primary to-red-600 rounded-lg flex items-center justify-center">
                   <Globe className="w-5 h-5 text-white" />
                 </div>
-
                 <div>
                   <h1 className="text-lg font-bold">UGS Admin</h1>
                   <p className="text-xs text-muted-foreground">Control Center</p>
@@ -431,6 +488,8 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
           </div>
         </div>
       </div>
+      {/* Spacer to offset fixed header height */}
+      <div className="h-20" />
 
       {/* Details Dialog (moved outside header) */}
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
@@ -479,19 +538,19 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                   <div>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1"><Mail className="w-3.5 h-3.5" /> Email</p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1"><Mail className="w-3.5 h-3.5 text-sky-500" /> Email</p>
                     <p className="break-words">{selectedApp.userEmail || selectedApp.personalInfo?.email || '—'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> Phone</p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1"><Phone className="w-3.5 h-3.5 text-emerald-500" /> Phone</p>
                     <p>{selectedApp.personalInfo?.phone || '—'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1"><FileText className="w-3.5 h-3.5" /> Service</p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1"><FileText className="w-3.5 h-3.5 text-indigo-500" /> Service</p>
                     <p>{getServiceDisplayName(selectedApp.travel?.serviceType)}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1"><Flag className="w-3.5 h-3.5" /> Country</p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1"><Flag className="w-3.5 h-3.5 text-rose-500" /> Country</p>
                     <p>{selectedApp.travel?.destination || '—'}</p>
                   </div>
                 </div>
@@ -500,15 +559,15 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                   <p className="text-sm font-medium">Travel Details</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                     <div>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1"><Plane className="w-3.5 h-3.5" /> Purpose</p>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1"><Plane className="w-3.5 h-3.5 text-amber-500" /> Purpose</p>
                       <p>{selectedApp.travel?.purpose || '—'}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> Dates</p>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1"><Calendar className="w-3.5 h-3.5 text-emerald-500" /> Dates</p>
                       <p>{selectedApp.travel?.travelDate || '—'} → {selectedApp.travel?.returnDate || '—'}</p>
                     </div>
                     <div className="sm:col-span-2">
-                      <p className="text-xs text-muted-foreground flex items-center gap-1"><Building className="w-3.5 h-3.5" /> Accommodation</p>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1"><Building className="w-3.5 h-3.5 text-indigo-500" /> Accommodation</p>
                       <p className="break-words">{selectedApp.travel?.accommodation || '—'}</p>
                     </div>
                   </div>
@@ -518,15 +577,15 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                   <p className="text-sm font-medium">Additional</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                     <div>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> Processing Speed</p>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-blue-500" /> Processing Speed</p>
                       <p>{selectedApp.additionalInfo?.processingSpeed || '—'}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1"><UserPlus className="w-3.5 h-3.5" /> Consultation</p>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1"><UserPlus className="w-3.5 h-3.5 text-fuchsia-500" /> Consultation</p>
                       <p>{selectedApp.additionalInfo?.consultationNeeded ? 'Yes' : 'No'}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1"><ShieldCheck className="w-3.5 h-3.5" /> Document Review</p>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1"><ShieldCheck className="w-3.5 h-3.5 text-emerald-500" /> Document Review</p>
                       <p>{selectedApp.additionalInfo?.documentReview ? 'Yes' : 'No'}</p>
                     </div>
                   </div>
@@ -773,19 +832,20 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
       </Dialog>
 
       {/* Main Content */}
-      {/* Fixed left desktop sidebar; full height with collapse/expand */}
+      {/* Fixed left desktop sidebar; position it below the fixed header to avoid overlap */}
       <div
         className="hidden lg:flex fixed left-0 top-20 bottom-0 z-30 items-stretch"
         onMouseEnter={() => setIsSidebarHovered(true)}
         onMouseLeave={() => setIsSidebarHovered(false)}
       >
         <div
-          className={`${(isSidebarCollapsed && !isSidebarHovered) ? 'w-16' : 'w-64'} h-full transition-all duration-300`}
+          className={`${(isSidebarCollapsed && !isSidebarHovered) ? 'w-16' : 'w-64'} h-full transition-all duration-300 pt-0`}
         >
           <DesktopSidebar
             items={adminTabs as any}
             selected={selectedTab}
             onSelect={setSelectedTab}
+            userData={adminUserData}
             collapsed={isSidebarCollapsed && !isSidebarHovered}
             onToggleCollapse={() => setIsSidebarCollapsed(v => !v)}
             onLogout={onLogout}
@@ -793,6 +853,8 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
         </div>
       </div>
 
+      {/* Scrollable content area (only this scrolls) */}
+      <div className="h-[calc(100vh-5rem-1px)] overflow-auto pb-8">
       <div className="site-container site-max pt-6 md:pt-8 pb-12">
         {/* Admin quick actions removed per request */}
         {/* Desktop: content shifts right to accommodate fixed sidebar */}
@@ -818,27 +880,71 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
               return (
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
                   {/* User list */}
-                  <div className="md:col-span-5 lg:col-span-4">
+                  <div className="md:col-span-6 lg:col-span-5">
                     <Card className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl h-full">
-                      <CardHeader className="pb-2">
+                      <CardHeader className="pb-3">
                         <CardTitle className="text-base">Conversations</CardTitle>
                         <CardDescription>Select a user to chat</CardDescription>
+                        <div className="mt-3 flex items-center gap-2">
+                          <input
+                            value={chatSearch}
+                            onChange={(e) => setChatSearch(e.target.value)}
+                            placeholder="Search by name or email"
+                            className="flex-1 h-9 rounded-lg border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-rose-500/40"
+                          />
+                          <Button size="sm" variant="secondary" className="bg-gradient-to-r from-rose-500 to-pink-500 text-white">
+                            <Search className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </CardHeader>
-                      <CardContent className="space-y-2 max-h-[28rem] overflow-auto pr-2 flex flex-col items-center">
+                      <CardContent className="space-y-2 max-h-[28rem] overflow-auto pr-2 flex flex-col items-stretch">
                         {users.length === 0 ? (
                           <div className="text-sm text-muted-foreground">No users available.</div>
                         ) : (
-                          users.map(u => (
+                          users
+                            .filter(u => {
+                              const q = chatSearch.trim().toLowerCase();
+                              if (!q) return true;
+                              return (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q);
+                            })
+                            .sort((a, b) => {
+                              const la = chatMetaByUser[a.id]?.lastAt || 0;
+                              const lb = chatMetaByUser[b.id]?.lastAt || 0;
+                              if (la === lb) return (a.name || '').localeCompare(b.name || '');
+                              return lb - la; // recent first
+                            })
+                            .map(u => (
                             <button
                               key={u.id}
-                              onClick={() => setSelectedChatUserId(u.id)}
-                              className={`w-72 mx-auto text-left p-3 rounded-lg border transition flex items-center gap-3 ${ (selectedChatUserId || users[0]?.id) === u.id ? 'bg-primary/10 border-primary/20' : 'bg-card border-border hover:bg-muted/40'}`}
+                              onClick={() => {
+                                setSelectedChatUserId(u.id);
+                                try {
+                                  const k = `adminLastSeen:${u.id}`;
+                                  localStorage.setItem(k, Date.now().toString());
+                                  setChatMetaByUser(prev => ({ ...prev, [u.id]: { ...(prev[u.id]||{}), unread: 0 } }));
+                                } catch {}
+                              }}
+                              className={`w-full text-left p-3 rounded-xl border transition flex items-center gap-3 hover:shadow-md ${ (selectedChatUserId || users[0]?.id) === u.id ? 'bg-gradient-to-r from-rose-500/10 to-pink-500/10 border-rose-300/30 dark:border-rose-500/20' : 'bg-card border-border hover:bg-muted/40'}`}
                             >
-                              <Avatar className="h-8 w-8"><AvatarFallback>{(u.name || u.email).slice(0,2).toUpperCase()}</AvatarFallback></Avatar>
-                              <div className="flex-1">
+                              <Avatar className="h-10 w-10 ring-2 ring-primary/20 overflow-hidden">
+                                {u.photoURL ? (
+                                  <AvatarImage src={u.photoURL} alt={u.name} className="h-full w-full object-cover" />
+                                ) : null}
+                                <AvatarFallback className="text-primary font-semibold">
+                                  {(u.name || u.email).slice(0,2).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
                                 <div className="font-medium whitespace-normal break-words leading-tight">{u.name}</div>
+                                <div className="text-xs text-muted-foreground truncate">{u.email}</div>
                               </div>
-                              <div className="ml-auto shrink-0"><Badge variant="secondary">{u.count}</Badge></div>
+                              {Boolean(chatMetaByUser[u.id]?.unread) && (chatMetaByUser[u.id]?.unread || 0) > 0 ? (
+                                <div className="ml-auto shrink-0">
+                                  <Badge className="bg-gradient-to-r from-rose-500 to-pink-500 text-white">
+                                    {chatMetaByUser[u.id]?.unread}
+                                  </Badge>
+                                </div>
+                              ) : null}
                             </button>
                           ))
                         )}
@@ -847,7 +953,7 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                   </div>
 
                   {/* Chat area */}
-                  <div className="md:col-span-7 lg:col-span-8">
+                  <div className="md:col-span-6 lg:col-span-7">
                     <ChatPanel
                       messages={activeMessages}
                       input={activeInput}
@@ -860,14 +966,24 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                         if (!user) { toast.error('Not authenticated'); return; }
                         const userId = getUserIdForChat(activeId);
                         if (!userId) { toast.error('No user id found for this conversation'); return; }
+                        // Optimistic render: in ChatPanel, 'user' side is right-aligned for admin-sent messages
+                        const msg: UiChatMessage = { id: Math.random().toString(36).slice(2), text, by: 'user' };
+                        pushMessage(msg);
+                        setActiveInput('');
                         setPending(true);
                         sendDirectMessage(userId, { text, byUid: user.uid, byRole: 'admin' })
                           .then(() => {
-                            setActiveInput('');
                             // Realtime listener will append the new message
                           })
                           .catch((e: any) => toast.error(e?.message || 'Failed to send message'))
-                          .finally(() => setPending(false));
+                          .finally(() => {
+                            setPending(false);
+                            try {
+                              const k = `adminLastSeen:${activeId}`;
+                              localStorage.setItem(k, Date.now().toString());
+                              setChatMetaByUser(prev => ({ ...prev, [activeId]: { ...(prev[activeId]||{}), unread: 0 } }));
+                            } catch {}
+                          });
                       }}
                       placeholder="Type a message to the client..."
                       emptyState="No messages yet. Start a conversation with this user."
@@ -1372,6 +1488,7 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
             {/* End conditional sections */}
           </div>
         </div>
+      </div>
       </div>
 
       {/* Mobile Sidebar */}

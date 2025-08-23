@@ -28,7 +28,7 @@ interface DesktopSidebarProps {
 export function DesktopSidebar({ items, selected, onSelect, className = '', collapsed = false, userData, headerTitle, headerSubtitle, onLogout, onToggleCollapse }: DesktopSidebarProps) {
   return (
     <div className={`h-full ${className}`}>
-      <div className={`flex flex-col h-full w-full overflow-y-auto backdrop-blur-xl bg-white/60 dark:bg-gray-900/60 border-r border-white/20 dark:border-gray-800/20 shadow-2xl px-3 py-4`}>
+      <div className={`flex flex-col h-full w-full overflow-hidden backdrop-blur-xl bg-white/60 dark:bg-gray-900/60 border-r border-white/20 dark:border-gray-800/20 shadow-2xl px-3 pt-0 pb-4`}>
         {/* Sidebar top spacing preserved; internal toggle intentionally removed */}
         {/* Brand/Header */}
         {(headerTitle || headerSubtitle) ? (

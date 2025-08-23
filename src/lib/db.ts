@@ -56,6 +56,16 @@ export async function sendDirectMessage(userId: string, msg: { text: string; byU
   return { id: docRef.id, ...(snap.data() as DirectMessage) };
 }
 
+// List all end users (excludes seed and admin accounts)
+export async function listAllUsers(pageSize = 500) {
+  const snap = await getDocs(collection(getDb(), "users"));
+  const items = snap.docs
+    .map(d => ({ id: d.id, ...(d.data() as UserDoc) }))
+    .filter(u => u.id !== "_seed" && (u as any)?._type !== 'seed' && (u.role || 'user') !== 'admin');
+  // Optionally truncate to pageSize
+  return items.slice(0, pageSize) as (UserDoc & { id: string })[];
+}
+
 // Real-time subscribe to direct messages for a given user
 export function subscribeDirectMessages(
   userId: string,
@@ -357,33 +367,40 @@ export async function getVisaApplication(appId: string) {
   return snap.exists() ? ({ id: appId, ...(snap.data() as VisaApplication) }) : null;
 }
 
-export async function listUserApplications(uid: string, pageSize = 20, cursor?: QueryDocumentSnapshot) {
-  const baseQuery = query(
+export async function listUserApplications(uid: string, pageSize = 20, _cursor?: QueryDocumentSnapshot) {
+  // Avoid composite index requirement: use simple where and sort client-side
+  const q = query(
     collection(getDb(), "visaApplications"),
     where("uid", "==", uid),
-    orderBy("createdAt", "desc"),
-    limit(pageSize),
   );
-  const q = cursor ? query(baseQuery, startAfter(cursor)) : baseQuery;
   const snap = await getDocs(q);
-  const items = snap.docs.map((d) => ({ id: d.id, ...(d.data() as VisaApplication) }));
-  const nextCursor = snap.docs[snap.docs.length - 1];
-  return { items, nextCursor };
+  const items = snap.docs
+    .map((d) => ({ id: d.id, ...(d.data() as VisaApplication) }))
+    .sort((a, b) => {
+      const ta = (a.createdAt as any)?.toMillis?.() ?? (a as any)?.createdAt?.seconds ?? 0;
+      const tb = (b.createdAt as any)?.toMillis?.() ?? (b as any)?.createdAt?.seconds ?? 0;
+      return tb - ta; // newest first
+    })
+    .slice(0, pageSize);
+  return { items, nextCursor: undefined as any };
 }
 
 // Fallback: list applications by stored email (some historical docs may miss uid or be copied between envs)
-export async function listUserApplicationsByEmail(email: string, pageSize = 20, cursor?: QueryDocumentSnapshot) {
-  const baseQuery = query(
+export async function listUserApplicationsByEmail(email: string, pageSize = 20, _cursor?: QueryDocumentSnapshot) {
+  const q = query(
     collection(getDb(), "visaApplications"),
     where("userEmail", "==", email),
-    orderBy("createdAt", "desc"),
-    limit(pageSize),
   );
-  const q = cursor ? query(baseQuery, startAfter(cursor)) : baseQuery;
   const snap = await getDocs(q);
-  const items = snap.docs.map((d) => ({ id: d.id, ...(d.data() as VisaApplication) }));
-  const nextCursor = snap.docs[snap.docs.length - 1];
-  return { items, nextCursor };
+  const items = snap.docs
+    .map((d) => ({ id: d.id, ...(d.data() as VisaApplication) }))
+    .sort((a, b) => {
+      const ta = (a.createdAt as any)?.toMillis?.() ?? (a as any)?.createdAt?.seconds ?? 0;
+      const tb = (b.createdAt as any)?.toMillis?.() ?? (b as any)?.createdAt?.seconds ?? 0;
+      return tb - ta;
+    })
+    .slice(0, pageSize);
+  return { items, nextCursor: undefined as any };
 }
 
 // Admin function to list all applications
