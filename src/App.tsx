@@ -1,12 +1,12 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
-import { getTheme as readTheme, setTheme as writeTheme, toggleTheme as flipTheme, type AppTheme } from './components/theme';
+import { getTheme as readTheme, setTheme as writeTheme, toggleTheme as flipTheme, type AppTheme } from './components/utils/theme';
 import { motion, AnimatePresence } from 'motion/react';
-import { Header } from './components/Header';
-import { Card, CardContent, CardHeader, CardTitle } from './components/card';
-import { Button } from './components/button';
-import { ImageWithFallback } from './components/ImageWithFallback';
-import { AspectRatio } from './components/aspect-ratio';
-import { Skeleton } from './components/skeleton';
+import { Header } from './components/layout/Header';
+import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card';
+import { Button } from './components/ui/button';
+import { ImageWithFallback } from './components/shared/ImageWithFallback';
+import { AspectRatio } from './components/ui/aspect-ratio';
+import { Skeleton } from './components/ui/skeleton';
 import { 
   Plane, 
   Home, 
@@ -24,15 +24,15 @@ import { ensureBaseCollections } from './lib/db';
 import { cldFetch } from './lib/cdn';
 
 // Lazy-loaded pages/components to reduce initial bundle size
-const HomePage = lazy(() => import('./components/HomePage').then(m => ({ default: m.HomePage })));
-const AuthPages = lazy(() => import('./components/AuthPages').then(m => ({ default: m.AuthPages })));
-const VisaEdPage = lazy(() => import('./components/VisaEdPage').then(m => ({ default: m.VisaEdPage })));
-const AllenAI = lazy(() => import('./components/AllenAI').then(m => ({ default: m.AllenAI })));
-const ServiceRequest = lazy(() => import('./components/ServiceRequest').then(m => ({ default: m.ServiceRequest })));
-const AdminDashboard = lazy(() => import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
-const ClientDashboard = lazy(() => import('./components/ClientDashboard').then(m => ({ default: m.ClientDashboard })));
-const VerifyEmail = lazy(() => import('./components/VerifyEmail').then(m => ({ default: m.VerifyEmail })));
-const CourseDetailsPage = lazy(() => import('./components/CourseDetailsPage').then(m => ({ default: m.CourseDetailsPage })));
+const HomePage = lazy(() => import('./components/pages/HomePage').then(m => ({ default: m.HomePage })));
+const AuthPages = lazy(() => import('./components/pages/AuthPages').then(m => ({ default: m.AuthPages })));
+const VisaEdPage = lazy(() => import('./components/pages/VisaEdPage').then(m => ({ default: m.VisaEdPage })));
+const AllenAI = lazy(() => import('./components/features/AllenAI').then(m => ({ default: m.AllenAI })));
+const ServiceRequest = lazy(() => import('./components/features/ServiceRequest').then(m => ({ default: m.ServiceRequest })));
+const AdminDashboard = lazy(() => import('./components/pages/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
+const ClientDashboard = lazy(() => import('./components/pages/ClientDashboard').then(m => ({ default: m.ClientDashboard })));
+const VerifyEmail = lazy(() => import('./components/pages/VerifyEmail').then(m => ({ default: m.VerifyEmail })));
+const CourseDetailsPage = lazy(() => import('./components/pages/CourseDetailsPage').then(m => ({ default: m.CourseDetailsPage })));
 
 // Basic error boundary to surface runtime errors instead of a blank screen
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { error: any }> {

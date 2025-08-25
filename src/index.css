@@ -1,5 +1,5 @@
 /* Import globals FIRST */
-@import "./components/globals.css";
+@import "./components/utils/globals.css";
 
 /* Tailwind layers */
 @tailwind base;
