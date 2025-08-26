@@ -594,7 +594,9 @@ export default function App() {
             currentPage={currentPage}
             onPageChange={setCurrentPage}
             theme={theme}
-            onThemeChange={toggleTheme}
+            onThemeChange={flipTheme}
+            isAdmin={isAdmin}
+            isClient={isClient}
           />
         )}
         <main className="relative">
@@ -688,7 +690,7 @@ export default function App() {
 
               <div className="border-t border-border pt-8 mt-8 text-center">
                 <p className="text-sm text-muted-foreground">
-                  © 2024 United Global Services. All rights reserved. | Inspiring borderless thinking.
+                  © 2025 United Global Services. All rights reserved. | Inspiring borderless thinking.
                 </p>
               </div>
             </div>

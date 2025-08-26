@@ -72,7 +72,7 @@ export function DesktopSidebar({ items, selected, onSelect, className = '', coll
           </div>
         ) : null}
 
-        <div className="mt-2 space-y-1">
+        <div className="mt-2 space-y-0">
           {items.map((it) => {
             const active = selected === it.value;
             const Icon = it.icon;
@@ -80,28 +80,28 @@ export function DesktopSidebar({ items, selected, onSelect, className = '', coll
               <button
                 key={it.value}
                 onClick={() => onSelect(it.value)}
-                className={`group flex items-start w-full px-3 py-2 rounded-md transition-all text-left ${
+                className={`group flex items-start w-full px-3 py-3 transition-all duration-300 ease-in-out text-left border-l-4 ${
                   active
-                    ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-lg ring-1 ring-white/20'
-                    : 'text-foreground hover:bg-white/40 dark:hover:bg-gray-800/40'
+                    ? 'bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-950/20 dark:to-pink-950/20 text-red-700 dark:text-red-300 border-red-500 shadow-sm'
+                    : 'text-foreground hover:bg-white/40 dark:hover:bg-gray-800/40 border-transparent hover:border-gray-300 dark:hover:border-gray-600'
                 }`}
                 title={it.label}
               >
                 {Icon ? (
-                  <Icon className={`mt-0.5 w-4 h-4 ${active ? 'text-white' : 'text-muted-foreground group-hover:text-foreground'}`} />
+                  <Icon className={`mt-0.5 w-4 h-4 ${active ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground group-hover:text-foreground'}`} />
                 ) : null}
                 {!collapsed ? (
                   <div className="ml-3 min-w-0 flex-1">
-                    <div className={`text-sm font-semibold truncate ${active ? 'text-white' : ''}`}>{it.label}</div>
+                    <div className={`text-sm font-semibold truncate ${active ? 'text-red-700 dark:text-red-300' : ''}`}>{it.label}</div>
                     {it.description ? (
-                      <div className={`text-xs truncate ${active ? 'text-white/90' : 'text-muted-foreground'}`}>{it.description}</div>
+                      <div className={`text-xs truncate ${active ? 'text-red-600/80 dark:text-red-400/80' : 'text-muted-foreground'}`}>{it.description}</div>
                     ) : null}
                   </div>
                 ) : (
                   <span className="sr-only">{it.label}</span>
                 )}
                 {!collapsed && it.badge ? (
-                  <span className={`ml-auto self-center text-[10px] px-1.5 py-0.5 rounded ${active ? 'bg-white/25 text-white' : 'bg-white/50 dark:bg-gray-800/60 text-muted-foreground'}`}>{it.badge}</span>
+                  <span className={`ml-auto self-center text-[10px] px-1.5 py-0.5 rounded ${active ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300' : 'bg-white/50 dark:bg-gray-800/60 text-muted-foreground'}`}>{it.badge}</span>
                 ) : null}
               </button>
             );

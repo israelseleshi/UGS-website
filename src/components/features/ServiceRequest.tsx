@@ -29,6 +29,8 @@ import {
 import { useAuth } from '../../lib/auth';
 import { submitVisaApplication } from '../../lib/db';
 import { toast } from 'sonner';
+import { createVisaApplication, upsertUser } from '../../lib/db';
+import { formatCountryDisplay } from '../../lib/countries';
 import { AspectRatio } from '../ui/aspect-ratio';
 import { ImageWithFallback } from '../shared/ImageWithFallback';
 import { Skeleton } from '../ui/skeleton';
@@ -849,7 +851,7 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
                 </div>
                 <div className="flex justify-between">
                   <span>Destination:</span>
-                  <span className="font-medium">{formData.destinationCountry || 'Not specified'}</span>
+                  <span className="font-medium">{formatCountryDisplay(formData.destinationCountry) || 'Not specified'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Travel Date:</span>

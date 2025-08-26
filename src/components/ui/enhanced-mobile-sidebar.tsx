@@ -1,10 +1,12 @@
 "use client";
 
-import * as React from "react";
-import { motion, AnimatePresence, type PanInfo } from "framer-motion";
-import { X, Menu } from "lucide-react";
-import { cn } from "../utils/utils";
-import { useMobileGestures, useEnhancedMobile } from "./use-mobile-gestures";
+import React, { useRef, useState, useEffect } from 'react';
+import { motion, AnimatePresence, type PanInfo } from 'framer-motion';
+import { X, Menu, User, Settings, LogOut, Mic, MicOff, Fingerprint, Eye, Zap } from 'lucide-react';
+import { cn } from '../utils/utils.ts';
+import { useMobileGestures, useEnhancedMobile } from './use-mobile-gestures.tsx';
+import { useBiometricAuth } from './use-biometric-auth.tsx';
+import { useParallaxEffects } from './use-parallax-effects.tsx';
 
 interface EnhancedMobileSidebarProps {
   children: React.ReactNode;
@@ -14,6 +16,7 @@ interface EnhancedMobileSidebarProps {
   className?: string;
   overlayClassName?: string;
   width?: string;
+  onNavigate?: (route: string) => void;
 }
 
 export function EnhancedMobileSidebar({
@@ -24,38 +27,49 @@ export function EnhancedMobileSidebar({
   className,
   overlayClassName,
   width = "320px",
+  onNavigate,
 }: EnhancedMobileSidebarProps) {
-  const { isMobile, supportsTouch, supportsHaptics } = useEnhancedMobile();
   const [isDragging, setIsDragging] = React.useState(false);
   const [dragProgress, setDragProgress] = React.useState(0);
   const sidebarRef = React.useRef<HTMLDivElement>(null);
 
+  // Enhanced mobile detection
+  const { isMobile, supportsTouch, supportsHaptics } = useEnhancedMobile();
+
   // Enhanced gesture handling
   const { gestureHandlers, triggerHapticFeedback } = useMobileGestures({
+    onSwipeRight: () => onOpenChange(false),
+    onSwipeLeft: () => onOpenChange(false),
     threshold: 50,
-    velocity: 0.3,
-    preventScroll: true,
-    onSwipeLeft: () => {
-      if (side === "right" && isOpen) {
-        onOpenChange(false);
-      } else if (side === "left" && !isOpen) {
-        onOpenChange(true);
-      }
-    },
-    onSwipeRight: () => {
-      if (side === "left" && isOpen) {
-        onOpenChange(false);
-      } else if (side === "right" && !isOpen) {
-        onOpenChange(true);
-      }
-    },
-    onSwipeStart: () => {
-      setIsDragging(true);
-    },
-    onSwipeEnd: () => {
-      setIsDragging(false);
-      setDragProgress(0);
-    },
+    velocity: 0.3
+  });
+
+  // Biometric authentication
+  const {
+    capabilities,
+    isListening,
+    authenticateFingerprint,
+    authenticateFaceId,
+    startVoiceRecognition,
+    stopVoiceRecognition,
+    triggerQuickAction
+  } = useBiometricAuth();
+
+  // Parallax depth effects
+  const {
+    initializeParallax,
+    createLayerStyle,
+    getCardTransform,
+    getShadowStyle,
+    createMagneticEffect,
+    shadowIntensity
+  } = useParallaxEffects({
+    layers: [
+      { id: 'background', speed: 0.1, depth: -80, blur: 3, opacity: 0.2 },
+      { id: 'midground', speed: 0.4, depth: -40, blur: 1, opacity: 0.7 },
+      { id: 'foreground', speed: 0.8, depth: -10, opacity: 0.95 },
+      { id: 'surface', speed: 1.0, depth: 0, opacity: 1.0 }
+    ]
   });
 
   // Handle drag gestures for smooth sidebar interaction
@@ -70,13 +84,8 @@ export function EnhancedMobileSidebar({
       // Calculate drag progress (0 to 1)
       const progress = Math.max(0, Math.min(1, dragDistance / maxDrag));
       setDragProgress(progress);
-
-      // Provide haptic feedback at certain thresholds
-      if (supportsHaptics && (progress === 0.25 || progress === 0.5 || progress === 0.75)) {
-        triggerHapticFeedback('light');
-      }
     },
-    [side, supportsTouch, supportsHaptics, triggerHapticFeedback]
+    [side, supportsTouch]
   );
 
   const handleDragEnd = React.useCallback(
@@ -96,7 +105,6 @@ export function EnhancedMobileSidebar({
       if (shouldToggle) {
         const shouldOpen = dragDistance > 0;
         if (shouldOpen !== isOpen) {
-          triggerHapticFeedback('medium');
           onOpenChange(shouldOpen);
         }
       }
@@ -104,34 +112,61 @@ export function EnhancedMobileSidebar({
       setIsDragging(false);
       setDragProgress(0);
     },
-    [side, isOpen, onOpenChange, supportsTouch, triggerHapticFeedback]
+    [side, isOpen, onOpenChange, supportsTouch]
   );
 
   // Keyboard accessibility
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && isOpen) {
+      if (event.key === 'Escape' && isOpen) {
         onOpenChange(false);
       }
     };
 
     if (isOpen) {
-      document.addEventListener("keydown", handleKeyDown);
-      // Focus management
-      const sidebar = sidebarRef.current;
-      if (sidebar) {
-        const focusableElements = sidebar.querySelectorAll(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        );
-        const firstElement = focusableElements[0] as HTMLElement;
-        firstElement?.focus();
-      }
+      document.addEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'hidden';
+      // Initialize parallax effects when sidebar opens
+      initializeParallax();
+    } else {
+      document.body.style.overflow = '';
     }
 
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen, onOpenChange]);
+  }, [isOpen, onOpenChange, initializeParallax]);
+
+  // Voice command handler
+  const handleVoiceCommand = (command: string) => {
+    switch (command) {
+      case 'closeMenu':
+        onOpenChange(false);
+        break;
+      case 'navigateHome':
+        onNavigate?.('home');
+        onOpenChange(false);
+        break;
+      case 'signIn':
+        onNavigate?.('signin');
+        onOpenChange(false);
+        break;
+      case 'getStarted':
+        onNavigate?.('signup');
+        onOpenChange(false);
+        break;
+      default:
+        console.log('Unknown voice command:', command);
+    }
+  };
+
+  // Biometric quick actions
+  const handleBiometricAction = async (action: string) => {
+    const result = await triggerQuickAction(action);
+    if (result.success) {
+      handleVoiceCommand(action);
+    }
+  };
 
   // Don't render on desktop
   if (!isMobile) return null;
@@ -187,37 +222,43 @@ export function EnhancedMobileSidebar({
             onClick={() => onOpenChange(false)}
           />
 
-          {/* Sidebar */}
+          {/* Enhanced Sidebar with Parallax Effects */}
           <motion.div
             ref={sidebarRef}
             initial="closed"
             animate="open"
             exit="closed"
             variants={sidebarVariants}
-            drag={supportsTouch ? "x" : false}
-            dragConstraints={{ 
-              left: side === "right" ? -50 : 0, 
-              right: side === "left" ? 50 : 0 
-            }}
-            dragElastic={0.1}
-            onDrag={handleDrag}
-            onDragEnd={handleDragEnd}
+            {...gestureHandlers}
             className={cn(
-              "fixed top-0 z-50 h-full bg-white dark:bg-gray-900 shadow-2xl",
-              "border-l border-gray-200 dark:border-gray-800",
+              "fixed top-0 z-50 h-full shadow-xl",
               "flex flex-col overflow-hidden",
               side === "right" ? "right-0" : "left-0",
-              isDragging && "cursor-grabbing",
               className
             )}
             style={{
               width,
-              // Apply drag progress for visual feedback
-              transform: isDragging 
-                ? `translateX(${dragProgress * (side === "right" ? 20 : -20)}px)` 
-                : undefined,
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.98) 100%)',
+              backdropFilter: 'blur(20px) saturate(180%)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              ...createLayerStyle('surface')
             }}
           >
+            {/* Parallax Background Layers */}
+            <div className="absolute inset-0 overflow-hidden">
+              <motion.div 
+                className="absolute inset-0 bg-gradient-to-br from-red-500/10 via-pink-500/5 to-orange-500/10"
+                style={createLayerStyle('background')}
+              />
+              <motion.div 
+                className="absolute inset-0 bg-gradient-to-t from-gray-900/5 to-transparent"
+                style={createLayerStyle('midground')}
+              />
+              <motion.div 
+                className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent"
+                style={createLayerStyle('foreground')}
+              />
+            </div>
             {/* Header with close button */}
             <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
               <div className="flex items-center space-x-3">

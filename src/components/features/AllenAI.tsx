@@ -65,6 +65,11 @@ export function AllenAI({ onPageChange }: AllenAIProps) {
     scrollToBottom();
   }, [messages]);
 
+  // Scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
 

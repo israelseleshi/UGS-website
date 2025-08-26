@@ -48,8 +48,8 @@ import {
   MessageSquare,
   Settings,
   Bell,
+  CloudUpload,
   Download,
-  Upload,
   Eye,
   Edit,
   Trash2,
@@ -74,8 +74,10 @@ import {
   Menu,
 } from "lucide-react";
 import { getTheme as readTheme, toggleTheme as flipTheme, type AppTheme } from "../utils/theme";
-import { useAuth } from "../../lib/auth";
-import { getUser, listUserApplications, listUserApplicationsByEmail, getVisaApplication, upsertUser, sendDirectMessage, subscribeDirectMessages, type AppMessage, type VisaApplication } from "../../lib/db";
+import { useAuth } from '../../lib/auth';
+import { getUser, listUserApplications, listUserApplicationsByEmail, getVisaApplication, upsertUser, sendDirectMessage, subscribeDirectMessages, type AppMessage, type VisaApplication } from '../../lib/db';
+import { formatCountryDisplay } from '../../lib/countries';
+import { DocumentUpload } from '../features/DocumentUpload';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
 import { MobileSidebar, MobileMenuButton } from '../layout/MobileSidebar';
@@ -208,7 +210,7 @@ export function ClientDashboard({
           const mapped = items.map((it: any) => ({
             id: it.id,
             type: it?.travel?.purpose || "Visa Application",
-            country: it?.travel?.destination || "—",
+            country: formatCountryDisplay(it?.travel?.destination || "—"),
             status: mapStatusToDisplay(it?.status),
             submittedDate: formatDate(it?.createdAt),
             expectedDate: "",
@@ -231,16 +233,21 @@ export function ClientDashboard({
                   if (lastId && items.some((i:any) => i.id === lastId)) {
                     setSupportAppId(lastId);
                   }
+                  const [activeTab, setActiveTab] = useState(() => {
+                    // Check if we're navigating from a specific route
+                    const savedTab = sessionStorage.getItem('clientDashboardTab');
+                    if (savedTab) {
+                      sessionStorage.removeItem('clientDashboardTab');
+                      return savedTab;
+                    }
+                    return 'overview';
+                  });
                   setSelectedTab('messages');
                   sessionStorage.removeItem('ugs_open_messages');
                   sessionStorage.removeItem('ugs_last_app_id');
-                } else if (selectedTab === 'overview') {
-                  // Otherwise, if they landed with existing apps, prefer opening Messages by default
-                  setSelectedTab('messages');
                 }
               } catch {
-                // If sessionStorage blocked, still default-select Messages on first load
-                if (selectedTab === 'overview') setSelectedTab('messages');
+                // Keep default tab as overview
               }
             }
           }
@@ -378,12 +385,11 @@ export function ClientDashboard({
   };
 
   const clientTabs = [
-    { value: 'overview', label: 'Overview', icon: BarChart3 },
-    { value: 'applications', label: 'Applications', icon: FileText, badge: applications.length.toString() },
-    { value: 'documents', label: 'Documents', icon: Upload },
-    { value: 'messages', label: 'Messages', icon: MessageSquare },
-    { value: 'profile', label: 'Profile', icon: User },
-    { value: 'settings', label: 'Settings', icon: Settings }
+    { id: 'overview', label: 'Overview', icon: Home, value: 'overview' },
+    { id: 'applications', label: 'Applications', icon: FileText, value: 'applications' },
+    { id: 'documents', label: 'Documents', icon: CloudUpload, value: 'documents' },
+    { id: 'messages', label: 'Messages', icon: MessageSquare, value: 'messages' },
+    { id: 'settings', label: 'Settings', icon: Settings, value: 'settings' },
   ];
 
   return (
@@ -412,7 +418,7 @@ export function ClientDashboard({
                 </div>
                 <div>
                   <h1 className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">UGS Client Portal</h1>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Premium Dashboard</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Client Portal</p>
                 </div>
               </div>
             </div>
@@ -439,7 +445,7 @@ export function ClientDashboard({
       <div className="hidden lg:flex fixed left-0 top-0 bottom-0 z-30 items-stretch"
            onMouseEnter={() => setIsSidebarHovered(true)}
            onMouseLeave={() => setIsSidebarHovered(false)}>
-        <div className={`${(isSidebarCollapsed && !isSidebarHovered) ? 'w-16' : 'w-64'} h-full transition-all duration-300 pt-4 md:pt-6`}>
+        <div className={`${(isSidebarCollapsed && !isSidebarHovered) ? 'w-16' : 'w-64'} h-full transition-all duration-300 ease-in-out pt-4 md:pt-6`}>
           <DesktopSidebar
             items={clientTabs as any}
             selected={selectedTab}
@@ -495,7 +501,7 @@ export function ClientDashboard({
                   </Card>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10">
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-2 md:gap-6">
                   {(() => {
                     const total = applications.length;
                     const approved = applications.filter((a) => a.status === 'Approved').length;
@@ -591,8 +597,8 @@ export function ClientDashboard({
                           </Button>
                         </div>
                         <div>
-                          <Button variant="secondary" className="w-full justify-start bg-white/20 hover:bg-white/30 text-white border-0">
-                            <Upload className="w-4 h-4 mr-2" />
+                          <Button variant="secondary" className="w-full justify-start bg-white/20 hover:bg-white/30 text-white border-0" onClick={() => setSelectedTab('documents')}>
+                            <CloudUpload className="w-4 h-4 mr-2" />
                             Upload Document
                           </Button>
                         </div>
@@ -709,17 +715,18 @@ export function ClientDashboard({
                       <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                       <input className="pl-9 pr-3 py-2 rounded-md bg-transparent border border-border text-sm" placeholder="Search" />
                     </div>
-                    <Button className="bg-gradient-to-r from-red-500 to-pink-500">
-                      <Upload className="w-4 h-4 mr-2" /> Upload Document
-                    </Button>
                   </div>
                 </div>
 
-                <Card className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-gray-800/20 shadow-2xl">
-                  <CardContent className="p-0">
-                    <div className="p-8 text-center text-sm text-gray-600 dark:text-gray-400">No documents yet.</div>
-                  </CardContent>
-                </Card>
+                <DocumentUpload
+                  applicationId={supportAppId || undefined}
+                  maxFiles={10}
+                  maxFileSize={10}
+                  onUploadComplete={(docs) => {
+                    toast.success(`Successfully uploaded ${docs.length} document(s)`);
+                  }}
+                  className="space-y-6"
+                />
               </div>
             )}
 
@@ -902,7 +909,7 @@ export function ClientDashboard({
                         </div>
                         <div>
                           <div className="text-gray-500">Destination</div>
-                          <div className="font-medium">{selectedApp.travel?.destination || '—'}</div>
+                          <div className="font-medium">{formatCountryDisplay(selectedApp.travel?.destination || '—')}</div>
                         </div>
                         <div>
                           <div className="text-gray-500">Purpose</div>

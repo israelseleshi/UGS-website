@@ -5,6 +5,7 @@ import { db } from './firebase';
 const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME as string;
 const DEFAULT_UPLOAD_FOLDER = (import.meta.env.VITE_CLOUDINARY_UPLOAD_FOLDER as string) || 'ugs/avatars';
 const DEFAULT_UPLOAD_PRESET = (import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET as string) || undefined;
+const DOCUMENTS_UPLOAD_PRESET = (import.meta.env.VITE_CLOUDINARY_DOCUMENTS_PRESET as string) || 'ugs-documents';
 const FUNCTIONS_REGION = (import.meta.env.VITE_FIREBASE_FUNCTIONS_REGION as string) || 'us-central1';
 const PROJECT_ID = import.meta.env.VITE_FIREBASE_PROJECT_ID as string | undefined;
 const DEFAULT_FUNCTIONS_BASE = PROJECT_ID ? `https://${FUNCTIONS_REGION}-${PROJECT_ID}.cloudfunctions.net` : '';
@@ -116,6 +117,150 @@ export async function uploadAvatar(file: File, options?: { folder?: string; publ
   });
 
   return promise;
+}
+
+export async function uploadToCloudinary(
+  file: File, 
+  options?: { 
+    folder?: string; 
+    public_id?: string; 
+    resource_type?: 'auto' | 'image' | 'video' | 'raw';
+    context?: Record<string, string>;
+    onProgress?: (progress: number) => void;
+  }
+): Promise<{ secure_url: string; public_id: string; [key: string]: any }> {
+  // Use documents preset for documents folder
+  if (options?.folder === 'ugs/documents') {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('upload_preset', DOCUMENTS_UPLOAD_PRESET);
+    form.append('resource_type', options?.resource_type || 'auto');
+    
+    if (options?.public_id) form.append('public_id', options.public_id);
+    if (options?.context) {
+      form.append('context', Object.entries(options.context).map(([k, v]) => `${k}=${v}`).join('|'));
+    }
+
+    const url = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${options?.resource_type || 'auto'}/upload`;
+
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && options?.onProgress) {
+          options.onProgress(Math.round((e.loaded / e.total) * 100));
+        }
+      };
+      
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const result = JSON.parse(xhr.responseText);
+            resolve(result);
+          } catch (err) {
+            reject(new Error('Failed to parse upload response'));
+          }
+        } else {
+          reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText}`));
+        }
+      };
+      
+      xhr.onerror = () => reject(new Error('Network error during upload'));
+      xhr.open('POST', url);
+      xhr.send(form);
+    });
+  }
+
+  // Use preset for default folder uploads
+  if (DEFAULT_UPLOAD_PRESET) {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('upload_preset', DEFAULT_UPLOAD_PRESET);
+    form.append('folder', options?.folder || DEFAULT_UPLOAD_FOLDER);
+    form.append('resource_type', options?.resource_type || 'auto');
+    
+    if (options?.public_id) form.append('public_id', options.public_id);
+    if (options?.context) {
+      form.append('context', Object.entries(options.context).map(([k, v]) => `${k}=${v}`).join('|'));
+    }
+
+    const url = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${options?.resource_type || 'auto'}/upload`;
+
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && options?.onProgress) {
+          options.onProgress(Math.round((e.loaded / e.total) * 100));
+        }
+      };
+      
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const result = JSON.parse(xhr.responseText);
+            resolve(result);
+          } catch (err) {
+            reject(new Error('Failed to parse upload response'));
+          }
+        } else {
+          reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText}`));
+        }
+      };
+      
+      xhr.onerror = () => reject(new Error('Network error during upload'));
+      xhr.open('POST', url);
+      xhr.send(form);
+    });
+  }
+
+  // Fallback to signed upload (requires Firebase Functions backend)
+  const { signature, timestamp, apiKey, folder, upload_preset, cloudName } = await getUploadSignature({ 
+    folder: options?.folder, 
+    public_id: options?.public_id 
+  });
+
+  const form = new FormData();
+  form.append('file', file);
+  form.append('api_key', apiKey);
+  form.append('timestamp', String(timestamp));
+  form.append('signature', signature);
+  form.append('folder', folder);
+  form.append('resource_type', options?.resource_type || 'auto');
+  
+  if (upload_preset) form.append('upload_preset', upload_preset);
+  if (options?.context) {
+    form.append('context', Object.entries(options.context).map(([k, v]) => `${k}=${v}`).join('|'));
+  }
+
+  const url = `https://api.cloudinary.com/v1_1/${cloudName || CLOUD_NAME}/${options?.resource_type || 'auto'}/upload`;
+
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && options?.onProgress) {
+        options.onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    };
+    
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const result = JSON.parse(xhr.responseText);
+          resolve(result);
+        } catch (err) {
+          reject(new Error('Failed to parse upload response'));
+        }
+      } else {
+        reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText}`));
+      }
+    };
+    
+    xhr.onerror = () => reject(new Error('Network error during upload'));
+    xhr.open('POST', url);
+    xhr.send(form);
+  });
 }
 
 export async function saveAvatarUrl(secureUrl: string) {

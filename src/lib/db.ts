@@ -48,6 +48,22 @@ export type DirectMessage = AppMessage & {
   userId: string; // Client user UID this thread belongs to
 };
 
+// Document metadata for uploaded files
+export type DocumentMetadata = {
+  id: string;
+  userId: string;
+  applicationId: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  cloudinaryUrl: string;
+  cloudinaryPublicId: string;
+  uploadedAt: Date;
+  status: 'uploaded' | 'processing' | 'approved' | 'rejected';
+  tags?: string[];
+  description?: string;
+};
+
 // Add a message in the top-level messages collection for a given user
 export async function sendDirectMessage(userId: string, msg: { text: string; byUid: string; byRole?: 'admin' | 'user' }) {
   const ref = collection(getDb(), 'messages');
@@ -434,6 +450,74 @@ export async function submitVisaApplication(applicationData: Partial<VisaApplica
 // Preserves:
 // - Any doc with id "_seed"
 // - For settings: preserves doc id "app"
+// Document management functions
+export async function saveDocumentMetadata(metadata: Omit<DocumentMetadata, 'id'>): Promise<string> {
+  const ref = collection(getDb(), 'documents');
+  const docRef = await addDoc(ref, {
+    ...metadata,
+    uploadedAt: serverTimestamp(),
+    createdAt: serverTimestamp()
+  });
+  return docRef.id;
+}
+
+export async function getUserDocuments(userId: string, applicationId?: string): Promise<DocumentMetadata[]> {
+  const ref = collection(getDb(), 'documents');
+  let q = query(ref, where('userId', '==', userId), orderBy('uploadedAt', 'desc'));
+  
+  if (applicationId) {
+    q = query(ref, where('userId', '==', userId), where('applicationId', '==', applicationId), orderBy('uploadedAt', 'desc'));
+  }
+  
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+    uploadedAt: doc.data().uploadedAt?.toDate() || new Date()
+  })) as DocumentMetadata[];
+}
+
+export async function deleteDocument(documentId: string, userId: string): Promise<void> {
+  const docRef = doc(getDb(), 'documents', documentId);
+  const docSnap = await getDoc(docRef);
+  
+  if (!docSnap.exists()) {
+    throw new Error('Document not found');
+  }
+  
+  const docData = docSnap.data();
+  if (docData.userId !== userId) {
+    throw new Error('Unauthorized: You can only delete your own documents');
+  }
+  
+  await deleteDoc(docRef);
+}
+
+export async function updateDocumentStatus(
+  documentId: string, 
+  status: DocumentMetadata['status'], 
+  userId?: string
+): Promise<void> {
+  const docRef = doc(getDb(), 'documents', documentId);
+  
+  if (userId) {
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists()) {
+      throw new Error('Document not found');
+    }
+    
+    const docData = docSnap.data();
+    if (docData.userId !== userId) {
+      throw new Error('Unauthorized: You can only update your own documents');
+    }
+  }
+  
+  await updateDoc(docRef, {
+    status,
+    updatedAt: serverTimestamp()
+  });
+}
+
 export async function wipeNonSeedData(collections: string[]) {
   for (const col of collections) {
     const snap = await getDocs(collection(getDb(), col));

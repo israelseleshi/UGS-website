@@ -7,6 +7,7 @@ import { Badge } from '../ui/badge';
 // Removed Tabs UI in favor of sidebar-driven conditional rendering
 // import { Popover, PopoverContent, PopoverTrigger } from './popover';
 import { listAllApplications, getVisaApplication, updateVisaApplication, sendDirectMessage, subscribeDirectMessages, listVisaEdRegistrations, ensureBaseCollections, listAllUsers, type VisaApplication, type VisaEdRegistration } from '../../lib/db';
+import { formatCountryDisplay } from '../../lib/countries';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 // import { Progress } from './progress';
@@ -344,7 +345,7 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
     id: app.id,
     client: `${app.personalInfo?.firstName || ''} ${app.personalInfo?.lastName || ''}`.trim() || 'Unknown',
     service: getServiceDisplayName(app.travel?.serviceType),
-    country: app.travel?.destination || 'Not specified',
+    country: formatCountryDisplay(app.travel?.destination || 'Not specified'),
     status: getStatusDisplayName(app.status),
     date: app.createdAt?.toDate?.()?.toISOString()?.slice(0, 10) || 'Unknown',
     amount: app.estimatedCost ? `ETB ${app.estimatedCost}` : 'TBD',
@@ -551,7 +552,7 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground flex items-center gap-1"><Flag className="w-3.5 h-3.5 text-rose-500" /> Country</p>
-                    <p>{selectedApp.travel?.destination || '—'}</p>
+                    <p>{formatCountryDisplay(selectedApp.travel?.destination || '—')}</p>
                   </div>
                 </div>
 
@@ -1141,7 +1142,7 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                       {applications.map((app) => {
                         const client = `${app.personalInfo?.firstName || ''} ${app.personalInfo?.lastName || ''}`.trim() || 'Unknown';
                         const service = getServiceDisplayName(app.travel?.serviceType);
-                        const country = app.travel?.destination || '—';
+                        const country = formatCountryDisplay(app.travel?.destination || '—');
                         const amount = app.estimatedCost ? `ETB ${app.estimatedCost.toLocaleString()}` : '—';
                         return (
                           <div key={app.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border rounded-lg">

@@ -92,34 +92,34 @@ export function MobileSidebar({
       )}
 
       {/* Sidebar (full-screen menu) */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 h-full w-full z-50 lg:hidden pointer-events-none"
-        >
-          {/* Drawer panel */}
-          <div className="pointer-events-auto absolute left-0 top-0 h-full w-[320px] sm:w-[360px] shadow-2xl ring-1 ring-black/10 dark:ring-white/10 overflow-hidden rounded-none">
+      <div
+        className={`fixed inset-0 h-full w-full z-50 lg:hidden pointer-events-none transition-all duration-300 ease-in-out ${
+          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+      >
+        {/* Drawer panel */}
+        <div className={`pointer-events-auto absolute left-0 top-0 h-full w-[320px] sm:w-[360px] shadow-2xl ring-1 ring-black/10 dark:ring-white/10 overflow-hidden rounded-none transition-transform duration-300 ease-in-out ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}>
             <div className="flex flex-col h-full bg-white/95 text-gray-900 dark:bg-gray-900/95 dark:text-white mobile-backdrop-blur">
               {/* Header */}
               <div className="flex items-center justify-between p-6 border-b border-black/10 dark:border-white/10 bg-white/80 dark:bg-gray-900/80 backdrop-blur">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-red-500 via-pink-500 to-orange-500 rounded-xl flex items-center justify-center shadow-lg ring-1 ring-white/20">
-                    <Globe className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h1 className="text-lg font-bold">
-                      {isAdmin ? 'UGS Admin' : 'UGS Client Portal'}
-                    </h1>
-                    <p className="text-xs text-gray-500 dark:text-gray-300">
-                      {isAdmin ? 'Control Center' : 'Premium Dashboard'}
-                    </p>
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onClose}
+                    className="w-9 h-9 p-0 text-gray-700 hover:bg-black/5 dark:text-white dark:hover:bg-white/10 transition-colors duration-200"
+                  >
+                    <Menu className="w-5 h-5" />
+                  </Button>
                 </div>
                 <div>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={onClose}
-                    className="w-9 h-9 p-0 text-gray-700 hover:bg-black/5 dark:text-white dark:hover:bg-white/10"
+                    className="w-9 h-9 p-0 text-gray-700 hover:bg-black/5 dark:text-white dark:hover:bg-white/10 transition-colors duration-200"
                   >
                     <X className="w-5 h-5" />
                   </Button>
@@ -167,43 +167,39 @@ export function MobileSidebar({
                 </div>
               )}
 
-              {/* Navigation Tabs */}
+              {/* Navigation Tabs - Stacked Design */}
               <div className="flex-1 overflow-y-auto py-4">
-                <div className="space-y-2 px-4">
+                <div className="space-y-0 px-4">
                   {tabs.map((tab) => (
-                    <div key={tab.value}>
-                      <Button
-                        variant={"ghost"}
-                        className={`w-full justify-start h-auto p-4 rounded-xl transition-all duration-300 mobile-touch-target border ${
-                          selectedTab === tab.value
-                            ? 'border-transparent bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-lg'
-                            : 'border-black/10 bg-transparent text-gray-900 hover:bg-black/5 dark:border-white/10 dark:text-white dark:hover:bg-white/10'
-                        }`}
-                        onClick={() => {
-                          onTabChange(tab.value);
-                          onClose();
-                        }}
-                      >
-                        <div className="flex items-center space-x-3 w-full">
-                          <tab.icon className={`w-5 h-5 ${selectedTab === tab.value ? 'text-white' : 'text-gray-900 dark:text-white'}`} />
-                          <div className="flex-1 text-left">
-                            <div className="flex items-center space-x-2">
-                              <span className={`font-medium ${selectedTab === tab.value ? 'text-white' : ''}`}>{tab.label}</span>
-                              {tab.badge && (
-                                <Badge className={`${selectedTab === tab.value ? 'bg-white/20 text-white' : 'bg-black/10 text-gray-900 dark:bg-white/20 dark:text-white'} text-xs`}>
-                                  {tab.badge}
-                                </Badge>
-                              )}
-                            </div>
-                            {tab.description && (
-                              <p className={`text-xs mt-1 ${selectedTab === tab.value ? 'text-white/90' : 'text-gray-600 dark:text-white/80'}`}>
-                                {tab.description}
-                              </p>
-                            )}
-                          </div>
+                    <button
+                      key={tab.value}
+                      className={`group flex items-start w-full px-4 py-4 transition-all duration-300 ease-in-out text-left border-l-4 mobile-touch-target ${
+                        selectedTab === tab.value
+                          ? 'bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-950/20 dark:to-pink-950/20 text-red-700 dark:text-red-300 border-red-500 shadow-sm'
+                          : 'text-gray-900 dark:text-white hover:bg-black/5 dark:hover:bg-white/5 border-transparent hover:border-gray-300 dark:hover:border-gray-600'
+                      }`}
+                      onClick={() => {
+                        onTabChange(tab.value);
+                        onClose();
+                      }}
+                    >
+                      <tab.icon className={`mt-0.5 w-5 h-5 ${selectedTab === tab.value ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white'}`} />
+                      <div className="ml-3 min-w-0 flex-1">
+                        <div className="flex items-center space-x-2">
+                          <span className={`text-sm font-semibold truncate ${selectedTab === tab.value ? 'text-red-700 dark:text-red-300' : ''}`}>{tab.label}</span>
+                          {tab.badge && (
+                            <Badge className={`text-xs ${selectedTab === tab.value ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>
+                              {tab.badge}
+                            </Badge>
+                          )}
                         </div>
-                      </Button>
-                    </div>
+                        {tab.description && (
+                          <p className={`text-xs mt-1 truncate ${selectedTab === tab.value ? 'text-red-600/80 dark:text-red-400/80' : 'text-gray-500 dark:text-gray-400'}`}>
+                            {tab.description}
+                          </p>
+                        )}
+                      </div>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -226,12 +222,11 @@ export function MobileSidebar({
                   </div>
                 )}
               </div>
-              </div>
             </div>
             {/* Transparent right-side area to close on click */}
             <div className="pointer-events-auto absolute left-[320px] sm:left-[360px] right-0 top-0 bottom-0" onClick={onClose} />
           </div>
-        )}
+        </div>
     </>
   );
 }
