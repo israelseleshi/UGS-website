@@ -1,6 +1,19 @@
 import React from 'react';
 import { Button } from '../ui/button';
-import { Moon, Sun, Globe, Menu, X } from 'lucide-react';
+import { 
+  Globe, 
+  Menu, 
+  X, 
+  Sun, 
+  Moon, 
+  User, 
+  LogOut,
+  ChevronDown
+} from 'lucide-react';
+import { useAuth } from '../../lib/auth';
+import { motion, AnimatePresence } from 'framer-motion';
+import { EnhancedMobileSidebar, EnhancedSidebarTrigger } from '../ui/enhanced-mobile-sidebar';
+import { useEnhancedMobile } from '../ui/use-mobile-gestures';
 
 interface HeaderProps {
   currentPage: string;
@@ -11,6 +24,8 @@ interface HeaderProps {
 
 export function Header({ currentPage, onPageChange, theme, onThemeChange }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  const { user, signOutUser } = useAuth();
+  const { isMobile, supportsTouch, supportsHaptics } = useEnhancedMobile();
 
   const navigation = [
     { name: 'Home', id: 'home' },
@@ -51,6 +66,17 @@ export function Header({ currentPage, onPageChange, theme, onThemeChange }: Head
               </button>
             ))}
           </nav>
+
+          {/* Enhanced mobile menu button */}
+          <div className="md:hidden">
+            <EnhancedSidebarTrigger
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-2"
+              aria-label="Toggle navigation menu"
+            >
+              <Menu className="h-5 w-5" />
+            </EnhancedSidebarTrigger>
+          </div>
 
           {/* Right side buttons */}
           <div className="flex items-center space-x-3">
