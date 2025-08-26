@@ -50,7 +50,8 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
     password: '',
     confirmPassword: '',
     agreeToTerms: false,
-    newsletterOptIn: false
+    newsletterOptIn: false,
+    rememberMe: false
   });
 
   const { signInWithEmail, signUpWithEmail, error: authError, loading: authLoading, resetPassword } = useAuth();
@@ -69,7 +70,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
     try {
       if (type === 'signin') {
         if (!formData.email || !formData.password) throw new Error('Please enter valid credentials');
-        await signInWithEmail(formData.email, formData.password);
+        await signInWithEmail(formData.email, formData.password, formData.rememberMe);
         // App.tsx will auto-route based on verification and role claims
       } else {
         if (!formData.agreeToTerms) throw new Error('Please agree to the terms and conditions');
@@ -131,8 +132,9 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
 
   return (
     <div className="min-h-screen flex relative overflow-hidden">
-      {/* Static Background (animated blobs removed) */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-red-50/30 dark:from-slate-950 dark:via-gray-900 dark:to-red-950/20" />
+      {/* Static Background matching header/footer */}
+      <div className="absolute inset-0 bg-muted/30 dark:bg-muted/20" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/5 via-background/80 to-muted/40 dark:from-primary/10 dark:via-background/90 dark:to-muted/20" />
 
       {/* Left side - Form */}
       <div className="flex-1 flex items-center justify-center px-6 sm:px-8 lg:px-12 py-8 relative z-10">
@@ -152,275 +154,284 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
             </div>
           </div>
 
-          <Card className="border-0 shadow-none bg-transparent backdrop-blur-0">
-            <CardHeader className="px-0 pb-6">
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-4xl md:text-5xl tracking-tight bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+                {type === 'signin' ? 'Welcome back' : 'Create your account'}
+              </h2>
+              <p className="text-lg md:text-xl mt-3 text-muted-foreground">
+                {type === 'signin' 
+                  ? 'Sign in to access your portal'
+                  : 'Create your account to get started'
+                }
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-7">
+
+              {/* Error Message */}
+              {(loginError || authError) && (
+                <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
+                  <div className="flex items-center space-x-3">
+                    <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+                    <p className="text-sm text-red-800 dark:text-red-200">{loginError || authError}</p>
+                  </div>
+                  {/* Resend verification helper */}
+                  {type === 'signin' && (loginError.toLowerCase().includes('verify your email')) && (
+                    <div className="mt-3 flex items-center justify-between">
+                      <p className="text-xs text-red-700 dark:text-red-300">Haven't received the email?</p>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm" 
+                        className="border-red-300 text-red-700 dark:text-red-300" 
+                        onClick={handleResendVerification} 
+                        disabled={isLoading || authLoading}
+                      >
+                        Resend verification
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {infoMessage && (
+                <div
+                  className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-4"
+                >
+                  <div className="flex items-center space-x-3">
+                    <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+                    <p className="text-sm text-emerald-800 dark:text-emerald-200">{infoMessage}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Core Credentials (signin only) */}
+              {type === 'signin' && (
+                <div className="space-y-5">
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-sm">Email <span className="text-red-500">*</span></Label>
+                    <div className="relative">
+                      <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="you@company.com"
+                        className="pl-10 bg-transparent border-0 border-b rounded-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary border-gray-400 dark:border-gray-600"
+                        value={formData.email}
+                        onChange={(e) => handleInputChange('email', e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="password" className="text-sm">Password <span className="text-red-500">*</span></Label>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <Input
+                        id="password"
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="••••••••"
+                        className="pl-10 pr-10 bg-transparent border-0 border-b rounded-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary border-gray-400 dark:border-gray-600"
+                        value={formData.password}
+                        onChange={(e) => handleInputChange('password', e.target.value)}
+                        required
+                      />
+                      <button type="button" aria-label="Toggle password" onClick={() => setShowPassword((v) => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="rememberMe" 
+                          checked={formData.rememberMe}
+                          onCheckedChange={(checked) => handleInputChange('rememberMe', checked as boolean)}
+                        />
+                        <Label htmlFor="rememberMe" className="text-sm">Remember me</Label>
+                      </div>
+                      <Button type="button" onClick={() => setForgotOpen(true)} variant="link" className="px-0 text-xs bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent">Forgot password?</Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {type === 'signup' && (
+                <div className="space-y-5">
+                  {/* Names (required) */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName" className="text-sm">First name <span className="text-red-500">*</span></Label>
+                      <div className="relative">
+                        <User className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <Input
+                          id="firstName"
+                          placeholder="John"
+                          className="pl-10 bg-transparent border-0 border-b rounded-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary border-gray-400 dark:border-gray-600"
+                          value={formData.firstName}
+                          onChange={(e) => handleInputChange('firstName', e.target.value)}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName" className="text-sm">Last name <span className="text-red-500">*</span></Label>
+                      <div className="relative">
+                        <User className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <Input
+                          id="lastName"
+                          placeholder="Doe"
+                          className="pl-10 bg-transparent border-0 border-b rounded-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary border-gray-400 dark:border-gray-600"
+                          value={formData.lastName}
+                          onChange={(e) => handleInputChange('lastName', e.target.value)}
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Email (required) */}
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-sm">Email <span className="text-red-500">*</span></Label>
+                    <div className="relative">
+                      <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="you@company.com"
+                        className="pl-10 bg-transparent border-0 border-b rounded-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary border-gray-400 dark:border-gray-600"
+                        value={formData.email}
+                        onChange={(e) => handleInputChange('email', e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {/* Password (required) */}
+                  <div className="space-y-2">
+                    <Label htmlFor="password" className="text-sm">Password <span className="text-red-500">*</span></Label>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <Input
+                        id="password"
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="••••••••"
+                        className="pl-10 pr-10 bg-transparent border-0 border-b rounded-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary border-gray-400 dark:border-gray-600"
+                        value={formData.password}
+                        onChange={(e) => handleInputChange('password', e.target.value)}
+                        required
+                      />
+                      <button type="button" aria-label="Toggle password" onClick={() => setShowPassword((v) => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Confirm Password (required) */}
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword" className="text-sm">Confirm password <span className="text-red-500">*</span></Label>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <Input
+                        id="confirmPassword"
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        placeholder="••••••••"
+                        className="pl-10 pr-10 bg-transparent border-0 border-b rounded-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary border-gray-400 dark:border-gray-600"
+                        value={formData.confirmPassword}
+                        onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                        required
+                      />
+                      <button type="button" aria-label="Toggle confirm password" onClick={() => setShowConfirmPassword((v) => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                        {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Phone (optional) */}
+                  <div className="space-y-2">
+                    <Label htmlFor="phone" className="text-sm">Phone (optional)</Label>
+                    <div className="relative">
+                      <Phone className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <Input
+                        id="phone"
+                        type="tel"
+                        placeholder="+1 (555) 000-0000"
+                        className="pl-10 bg-transparent border-0 border-b rounded-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary border-gray-400 dark:border-gray-600"
+                        value={formData.phone}
+                        onChange={(e) => handleInputChange('phone', e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Agreements */}
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3">
+                      <Checkbox 
+                        id="terms" 
+                        checked={formData.agreeToTerms}
+                        onCheckedChange={(checked) => handleInputChange('agreeToTerms', checked as boolean)}
+                        required
+                      />
+                      <Label htmlFor="terms" className="text-sm leading-relaxed">
+                        I agree to UGS's{' '}
+                        <button type="button" onClick={() => setTosOpen(true)} className="px-0 text-sm h-auto p-0 bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent underline">
+                          Terms of Service
+                        </button>{' '}
+                        and{' '}
+                        <button type="button" onClick={() => setPrivacyOpen(true)} className="px-0 text-sm h-auto p-0 bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent underline">
+                          Privacy Policy
+                        </button>
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <Checkbox 
+                        id="newsletter" 
+                        checked={formData.newsletterOptIn}
+                        onCheckedChange={(checked) => handleInputChange('newsletterOptIn', checked as boolean)}
+                      />
+                      <Label htmlFor="newsletter" className="text-sm">
+                        Send me updates and offers
+                      </Label>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div>
-                <CardTitle className="text-4xl md:text-5xl tracking-tight bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                  {type === 'signin' ? 'Welcome back' : 'Create your account'}
-                </CardTitle>
-                <CardDescription className="text-lg md:text-xl mt-3 text-muted-foreground">
-                  {type === 'signin' 
-                    ? 'Sign in to access your portal'
-                    : 'Create your account to get started'
-                  }
-                </CardDescription>
+                <Button 
+                  type="submit" 
+                  className="w-full bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 shadow-lg" 
+                  size="lg"
+                  disabled={isLoading || authLoading}
+                >
+                  {isLoading || authLoading ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      {type === 'signin' ? 'Sign In' : 'Create Account'}
+                      <ArrowRight className="w-5 h-5 ml-2" />
+                    </>
+                  )}
+                </Button>
               </div>
-            </CardHeader>
 
-            <CardContent className="px-0">
-              <form onSubmit={handleSubmit} className="space-y-7">
+              {/* Removed social sign-in to enforce Gmail-only email/password + OTP flow */}
 
-                {/* Error Message */}
-                {(loginError || authError) && (
-                  <div
-                    className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-xl p-4"
-                  >
-                      <div className="flex items-center space-x-3">
-                        <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
-                        <p className="text-sm text-red-800 dark:text-red-200">{loginError || authError}</p>
-                      </div>
-                      {/* Resend verification helper */}
-                      {type === 'signin' && (loginError.toLowerCase().includes('verify your email')) && (
-                        <div className="mt-3 flex items-center justify-between">
-                          <p className="text-xs text-red-700 dark:text-red-300">Haven't received the email?</p>
-                          <Button type="button" variant="outline" size="sm" className="border-red-300 text-red-700 dark:text-red-300" onClick={handleResendVerification} disabled={isLoading || authLoading}>
-                            Resend verification
-                          </Button>
-                        </div>
-                      )}
-                  </div>
-                )}
-
-                {infoMessage && (
-                  <div
-                    className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-4"
-                  >
-                      <div className="flex items-center space-x-3">
-                        <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-                        <p className="text-sm text-emerald-800 dark:text-emerald-200">{infoMessage}</p>
-                      </div>
-                  </div>
-                )}
-
-                {/* Core Credentials (signin only) */}
-                {type === 'signin' && (
-                  <div className="space-y-5">
-                    <div className="space-y-2">
-                      <Label htmlFor="email" className="text-sm">Email <span className="text-red-500">*</span></Label>
-                      <div className="relative">
-                        <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <Input
-                          id="email"
-                          type="email"
-                          placeholder="you@company.com"
-                          className="pl-10 bg-transparent border-0 border-b rounded-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary border-gray-400 dark:border-gray-600"
-                          value={formData.email}
-                          onChange={(e) => handleInputChange('email', e.target.value)}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="password" className="text-sm">Password <span className="text-red-500">*</span></Label>
-                      <div className="relative">
-                        <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <Input
-                          id="password"
-                          type={showPassword ? 'text' : 'password'}
-                          placeholder="••••••••"
-                          className="pl-10 pr-10 bg-transparent border-0 border-b rounded-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary border-gray-400 dark:border-gray-600"
-                          value={formData.password}
-                          onChange={(e) => handleInputChange('password', e.target.value)}
-                          required
-                        />
-                        <button type="button" aria-label="Toggle password" onClick={() => setShowPassword((v) => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                      <div className="flex justify-end">
-                        <Button type="button" onClick={() => setForgotOpen(true)} variant="link" className="px-0 text-xs bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent">Forgot password?</Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {type === 'signup' && (
-                  <div className="space-y-5">
-                    {/* Names (required) */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="firstName" className="text-sm">First name <span className="text-red-500">*</span></Label>
-                        <div className="relative">
-                          <User className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                          <Input
-                            id="firstName"
-                            placeholder="John"
-                            className="pl-10 bg-transparent border-0 border-b rounded-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary border-gray-400 dark:border-gray-600"
-                            value={formData.firstName}
-                            onChange={(e) => handleInputChange('firstName', e.target.value)}
-                            required
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="lastName" className="text-sm">Last name <span className="text-red-500">*</span></Label>
-                        <div className="relative">
-                          <User className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                          <Input
-                            id="lastName"
-                            placeholder="Doe"
-                            className="pl-10 bg-transparent border-0 border-b rounded-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary border-gray-400 dark:border-gray-600"
-                            value={formData.lastName}
-                            onChange={(e) => handleInputChange('lastName', e.target.value)}
-                            required
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Email (required) */}
-                    <div className="space-y-2">
-                      <Label htmlFor="email" className="text-sm">Email <span className="text-red-500">*</span></Label>
-                      <div className="relative">
-                        <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <Input
-                          id="email"
-                          type="email"
-                          placeholder="you@company.com"
-                          className="pl-10 bg-transparent border-0 border-b rounded-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary border-gray-400 dark:border-gray-600"
-                          value={formData.email}
-                          onChange={(e) => handleInputChange('email', e.target.value)}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    {/* Password (required) */}
-                    <div className="space-y-2">
-                      <Label htmlFor="password" className="text-sm">Password <span className="text-red-500">*</span></Label>
-                      <div className="relative">
-                        <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <Input
-                          id="password"
-                          type={showPassword ? 'text' : 'password'}
-                          placeholder="••••••••"
-                          className="pl-10 pr-10 bg-transparent border-0 border-b rounded-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary border-gray-400 dark:border-gray-600"
-                          value={formData.password}
-                          onChange={(e) => handleInputChange('password', e.target.value)}
-                          required
-                        />
-                        <button type="button" aria-label="Toggle password" onClick={() => setShowPassword((v) => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Confirm Password (required) */}
-                    <div className="space-y-2">
-                      <Label htmlFor="confirmPassword" className="text-sm">Confirm password <span className="text-red-500">*</span></Label>
-                      <div className="relative">
-                        <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <Input
-                          id="confirmPassword"
-                          type={showConfirmPassword ? 'text' : 'password'}
-                          placeholder="••••••••"
-                          className="pl-10 pr-10 bg-transparent border-0 border-b rounded-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary border-gray-400 dark:border-gray-600"
-                          value={formData.confirmPassword}
-                          onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                          required
-                        />
-                        <button type="button" aria-label="Toggle confirm password" onClick={() => setShowConfirmPassword((v) => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                          {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Phone (optional) */}
-                    <div className="space-y-2">
-                      <Label htmlFor="phone" className="text-sm">Phone (optional)</Label>
-                      <div className="relative">
-                        <Phone className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <Input
-                          id="phone"
-                          type="tel"
-                          placeholder="+1 (555) 000-0000"
-                          className="pl-10 bg-transparent border-0 border-b rounded-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary border-gray-400 dark:border-gray-600"
-                          value={formData.phone}
-                          onChange={(e) => handleInputChange('phone', e.target.value)}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Agreements */}
-                    <div className="space-y-4">
-                      <div className="flex items-start gap-3">
-                        <Checkbox 
-                          id="terms" 
-                          checked={formData.agreeToTerms}
-                          onCheckedChange={(checked) => handleInputChange('agreeToTerms', checked as boolean)}
-                          required
-                        />
-                        <Label htmlFor="terms" className="text-sm leading-relaxed">
-                          I agree to UGS's{' '}
-                          <button type="button" onClick={() => setTosOpen(true)} className="px-0 text-sm h-auto p-0 bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent underline">
-                            Terms of Service
-                          </button>{' '}
-                          and{' '}
-                          <button type="button" onClick={() => setPrivacyOpen(true)} className="px-0 text-sm h-auto p-0 bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent underline">
-                            Privacy Policy
-                          </button>
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        <Checkbox 
-                          id="newsletter" 
-                          checked={formData.newsletterOptIn}
-                          onCheckedChange={(checked) => handleInputChange('newsletterOptIn', checked as boolean)}
-                        />
-                        <Label htmlFor="newsletter" className="text-sm">
-                          Send me updates and offers
-                        </Label>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
+              <div className="text-center text-sm text-gray-600 dark:text-gray-400">
+                {type === 'signin' ? "Don't have an account? " : 'Already have an account? '}
                 <div>
                   <Button 
-                    type="submit" 
-                    className="w-full bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 shadow-lg" 
-                    size="lg"
-                    disabled={isLoading || authLoading}
+                    variant="link" 
+                    className="px-0 text-sm h-auto p-0 bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent font-semibold"
+                    onClick={() => onPageChange(type === 'signin' ? 'signup' : 'signin')}
                   >
-                    {isLoading || authLoading ? (
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        {type === 'signin' ? 'Sign In' : 'Create Account'}
-                        <ArrowRight className="w-5 h-5 ml-2" />
-                      </>
-                    )}
+                    {type === 'signin' ? 'Create an account' : 'Sign in to your account'}
                   </Button>
                 </div>
-
-                {/* Removed social sign-in to enforce Gmail-only email/password + OTP flow */}
-
-                <div className="text-center text-sm text-gray-600 dark:text-gray-400">
-                  {type === 'signin' ? "Don't have an account? " : 'Already have an account? '}
-                  <div>
-                    <Button 
-                      variant="link" 
-                      className="px-0 text-sm h-auto p-0 bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent font-semibold"
-                      onClick={() => onPageChange(type === 'signin' ? 'signup' : 'signin')}
-                    >
-                      {type === 'signin' ? 'Create an account' : 'Sign in to your account'}
-                    </Button>
-                  </div>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
 
@@ -428,7 +439,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
 
       {/* Terms of Service Dialog */}
       <Dialog open={tosOpen} onOpenChange={setTosOpen}>
-        <DialogContent className="backdrop-blur-xl">
+        <DialogContent className="bg-background/80 backdrop-blur-xl border-border">
           <DialogHeader>
             <DialogTitle>UGS Terms of Service</DialogTitle>
             <DialogDescription>Sample summary of our services and commitments.</DialogDescription>
@@ -443,7 +454,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
 
       {/* Privacy Policy Dialog */}
       <Dialog open={privacyOpen} onOpenChange={setPrivacyOpen}>
-        <DialogContent className="backdrop-blur-xl">
+        <DialogContent className="bg-background/80 backdrop-blur-xl border-border">
           <DialogHeader>
             <DialogTitle>UGS Privacy Policy</DialogTitle>
             <DialogDescription>How we collect, use, and protect your data.</DialogDescription>
@@ -458,7 +469,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
 
       {/* Forgot Password Dialog */}
       <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
-        <DialogContent className="backdrop-blur-xl">
+        <DialogContent className="bg-background/80 backdrop-blur-xl border-border">
           <DialogHeader>
             <DialogTitle>Reset your password</DialogTitle>
             <DialogDescription>Enter your account email. We'll send you a secure reset link.</DialogDescription>

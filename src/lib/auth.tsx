@@ -8,6 +8,9 @@ import {
   sendEmailVerification,
   reload,
   sendPasswordResetEmail,
+  setPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence
 } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
 import type { User } from "firebase/auth";
@@ -20,7 +23,7 @@ export type AuthContextType = {
   user: AppUser;
   loading: boolean;
   error: string | null;
-  signInWithEmail: (email: string, password: string) => Promise<void>;
+  signInWithEmail: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
   signUpWithEmail: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOutUser: () => Promise<void>;
@@ -96,11 +99,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => unsub();
   }, []);
 
-  const signInWithEmail = React.useCallback(async (email: string, password: string) => {
+  const signInWithEmail = React.useCallback(async (email: string, password: string, rememberMe: boolean = false) => {
     setError(null);
     try {
       if (!isFirebaseConfigured || !auth) throw new Error("Service is temporarily unavailable. Please try again shortly.");
+      
+      // Set persistence based on rememberMe option
+      if (rememberMe) {
+        // LOCAL persistence - user will stay signed in even after closing browser
+        await setPersistence(auth, browserLocalPersistence);
+      } else {
+        // SESSION persistence - user will be signed out when browser closes
+        await setPersistence(auth, browserSessionPersistence);
+      }
+      
       const cred = await signInWithEmailAndPassword(auth, email, password);
+      
       // After sign-in, check custom claims; only non-admins are asked to verify.
       // Whitelist admin email in case claims aren't set yet.
       try {
