@@ -77,7 +77,7 @@ export function Header({ currentPage, onPageChange, theme, onThemeChange, isAdmi
             <img 
               src="/ugs-logo.png" 
               alt="UGS Logo" 
-              className="w-16 h-16 md:w-20 md:h-20 object-contain dark:brightness-0 dark:invert hover:dark:brightness-100 hover:dark:invert-0 transition-all duration-300 ease-in-out cursor-pointer"
+              className="w-36 h-36 md:w-34 md:h-34 object-contain dark:brightness-0 dark:invert hover:dark:brightness-100 hover:dark:invert-0 transition-all duration-300 ease-in-out cursor-pointer"
             />
           </div>
 
