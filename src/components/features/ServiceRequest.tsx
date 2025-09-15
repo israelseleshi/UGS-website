@@ -33,7 +33,6 @@ import { createVisaApplication, upsertUser } from '../../lib/db';
 import { formatCountryDisplay } from '../../lib/countries';
 import { AspectRatio } from '../ui/aspect-ratio';
 import { ImageWithFallback } from '../shared/ImageWithFallback';
-import { Skeleton } from '../ui/skeleton';
 import { cldFetch } from '../../lib/cdn';
 
 interface ServiceRequestProps {
@@ -44,7 +43,6 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
   const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [imagesLoaded, setImagesLoaded] = useState(0);
   const [formData, setFormData] = useState({
     // Personal Information
     firstName: '',
@@ -360,7 +358,6 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
     }
   ];
 
-  const allImagesLoaded = imagesLoaded >= services.length;
 
   const renderStepContent = () => {
     switch (currentStep) {
@@ -373,33 +370,6 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {!allImagesLoaded && (
-                <>
-                  {[...Array(4)].map((_, i) => (
-                    <Card key={`sk-${i}`} className="overflow-hidden">
-                      <CardContent className="p-6">
-                        <div className="relative mb-5">
-                          <div className="absolute -top-3 -left-3 h-24 w-32 md:h-28 md:w-40 rounded-2xl rotate-[-6deg] bg-indigo-600/20 dark:bg-indigo-500/15 blur-[1px]" aria-hidden="true"></div>
-                          <div className="absolute -bottom-3 -right-3 h-24 w-32 md:h-28 md:w-40 rounded-2xl rotate-[8deg] bg-blue-600/20 dark:bg-blue-500/15" aria-hidden="true"></div>
-                          <div className="relative rounded-2xl overflow-hidden">
-                            <AspectRatio ratio={16/9}>
-                              <Skeleton className="h-full w-full" />
-                            </AspectRatio>
-                          </div>
-                        </div>
-                        <div className="space-y-3">
-                          <Skeleton className="h-5 w-1/2" />
-                          <Skeleton className="h-4 w-3/4" />
-                          <div className="flex items-center justify-between pt-1">
-                            <Skeleton className="h-6 w-24" />
-                            <Skeleton className="h-6 w-24" />
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </>
-              )}
               {services.map((service) => (
                 <Card 
                   key={service.id}
@@ -427,8 +397,6 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
                             className="h-full w-full object-cover"
                             loading="lazy"
                             referrerPolicy="no-referrer"
-                            onLoad={() => setImagesLoaded((n) => n + 1)}
-                            onError={() => setImagesLoaded((n) => n + 1)}
                           />
                         </AspectRatio>
                       </div>

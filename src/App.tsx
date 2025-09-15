@@ -29,6 +29,7 @@ const AuthPages = lazy(() => import('./components/pages/AuthPages').then(m => ({
 const VisaEdPage = lazy(() => import('./components/pages/VisaEdPage').then(m => ({ default: m.VisaEdPage })));
 const AllenAI = lazy(() => import('./components/features/AllenAI').then(m => ({ default: m.AllenAI })));
 const ServiceRequest = lazy(() => import('./components/features/ServiceRequest').then(m => ({ default: m.ServiceRequest })));
+const TradeLicenseRequest = lazy(() => import('./components/features/TradeLicenseRequest').then(m => ({ default: m.TradeLicenseRequest })));
 const AdminDashboard = lazy(() => import('./components/pages/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 const ClientDashboard = lazy(() => import('./components/pages/ClientDashboard').then(m => ({ default: m.ClientDashboard })));
 const VerifyEmail = lazy(() => import('./components/pages/VerifyEmail').then(m => ({ default: m.VerifyEmail })));
@@ -325,20 +326,11 @@ export default function App() {
                       <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                         <Button 
                           size="lg" 
-                          onClick={() => setCurrentPage('request')}
+                          onClick={() => setCurrentPage(service.title === 'International Trade License' ? 'trade-license' : 'request')}
                           className="flex items-center"
                         >
                           {service.cta}
                           <ArrowRight className="w-5 h-5 ml-2" />
-                        </Button>
-                      </motion.div>
-                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                        <Button 
-                          variant="outline" 
-                          size="lg"
-                          onClick={() => setCurrentPage('allen')}
-                        >
-                          Ask Allen AI
                         </Button>
                       </motion.div>
                     </div>
@@ -562,6 +554,7 @@ export default function App() {
       'signin': <AuthPages type="signin" onPageChange={setCurrentPage} onAdminLogin={handleAdminLogin} onUserLogin={handleUserLogin} />,
       'signup': <AuthPages type="signup" onPageChange={setCurrentPage} onUserLogin={handleUserLogin} />,
       'request': <ServiceRequest onPageChange={setCurrentPage} />,
+      'trade-license': <TradeLicenseRequest onPageChange={setCurrentPage} />,
       'verify-email': <VerifyEmail onPageChange={setCurrentPage} />,
       'admin-dashboard': <AdminDashboard onPageChange={setCurrentPage} onLogout={handleAdminLogout} />,
       'client-dashboard': <ClientDashboard onPageChange={setCurrentPage} onLogout={handleClientLogout} />
@@ -627,15 +620,13 @@ export default function App() {
                 <div className="space-y-4">
                   <motion.div
                     whileHover={{ scale: 1.05 }}
-                    className="flex items-center space-x-3"
+                    className="flex items-center"
                   >
-                    <div className="w-8 h-8 bg-gradient-to-br from-primary to-red-600 rounded-lg flex items-center justify-center">
-                      <Globe className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold">UGS</h3>
-                      <p className="text-xs text-muted-foreground">inspiring borderless thinking</p>
-                    </div>
+                    <img 
+                      src="/ugs-logo.png" 
+                      alt="UGS Logo" 
+                      className="w-24 h-24 md:w-28 md:h-28 object-contain dark:brightness-0 dark:invert hover:dark:brightness-100 hover:dark:invert-0 transition-all duration-300 ease-in-out cursor-pointer"
+                    />
                   </motion.div>
                   <p className="text-sm text-muted-foreground">
                     Your trusted partner for visa and immigration services worldwide.
@@ -656,7 +647,6 @@ export default function App() {
                     title: 'Resources',
                     links: [
                       { name: 'VisaEd', action: () => setCurrentPage('visaed') },
-                      { name: 'Allen AI', action: () => setCurrentPage('allen') },
                       { name: 'Blog', action: () => {} }
                     ]
                   },
@@ -690,7 +680,7 @@ export default function App() {
 
               <div className="border-t border-border pt-8 mt-8 text-center">
                 <p className="text-sm text-muted-foreground">
-                  © 2025 United Global Services. All rights reserved. | Inspiring borderless thinking.
+                  2025 United Global Services. All rights reserved. | Inspiring borderless thinking.
                 </p>
               </div>
             </div>

@@ -356,7 +356,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                       <Input
                         id="phone"
                         type="tel"
-                        placeholder="+1 (555) 000-0000"
+                        placeholder="+251 912 345 6789"
                         className="pl-10 bg-transparent border-0 border-b rounded-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary border-gray-400 dark:border-gray-600"
                         value={formData.phone}
                         onChange={(e) => handleInputChange('phone', e.target.value)}

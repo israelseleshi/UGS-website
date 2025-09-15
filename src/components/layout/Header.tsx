@@ -71,16 +71,14 @@ export function Header({ currentPage, onPageChange, theme, onThemeChange, isAdmi
   return (
     <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border">
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-primary to-red-600 rounded-lg flex items-center justify-center">
-              <Globe className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-foreground">UGS</h1>
-              <p className="text-xs text-muted-foreground -mt-1">inspiring borderless thinking</p>
-            </div>
+          <div className="flex items-center">
+            <img 
+              src="/ugs-logo.png" 
+              alt="UGS Logo" 
+              className="w-16 h-16 md:w-20 md:h-20 object-contain dark:brightness-0 dark:invert hover:dark:brightness-100 hover:dark:invert-0 transition-all duration-300 ease-in-out cursor-pointer"
+            />
           </div>
 
           {/* Desktop Navigation */}
@@ -89,9 +87,9 @@ export function Header({ currentPage, onPageChange, theme, onThemeChange, isAdmi
               <button
                 key={item.id}
                 onClick={() => onPageChange(item.id)}
-                className={`text-sm transition-colors hover:text-primary ${
+                className={`text-lg font-medium px-4 py-2 transition-all duration-200 hover:text-primary ${
                   currentPage === item.id
-                    ? 'text-primary font-medium'
+                    ? 'text-primary font-semibold'
                     : 'text-muted-foreground'
                 }`}
               >
@@ -104,14 +102,14 @@ export function Header({ currentPage, onPageChange, theme, onThemeChange, isAdmi
           <div className="flex items-center space-x-3">
             <Button
               variant="ghost"
-              size="sm"
+              size="lg"
               onClick={onThemeChange}
-              className="w-9 h-9 p-0"
+              className="w-12 h-12 p-0"
             >
               {theme === 'dark' ? (
-                <Sun className="w-4 h-4" />
+                <Sun className="w-6 h-6" />
               ) : (
-                <Moon className="w-4 h-4" />
+                <Moon className="w-6 h-6" />
               )}
             </Button>
             
@@ -168,14 +166,16 @@ export function Header({ currentPage, onPageChange, theme, onThemeChange, isAdmi
               <div className="hidden sm:flex space-x-2">
                 <Button 
                   variant="outline" 
-                  size="sm"
+                  size="lg"
                   onClick={() => onPageChange('signin')}
+                  className="px-6 py-3 text-base font-medium"
                 >
                   Sign In
                 </Button>
                 <Button 
-                  size="sm"
+                  size="lg"
                   onClick={() => onPageChange('signup')}
+                  className="px-6 py-3 text-base font-medium"
                 >
                   Get Started
                 </Button>

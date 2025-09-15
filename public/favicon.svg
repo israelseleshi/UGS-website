@@ -1,0 +1,38 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .logo-primary {
+        fill: #ef4444;
+      }
+      .logo-secondary {
+        fill: #1f2937;
+      }
+      .logo-text {
+        fill: #ffffff;
+      }
+      
+      @media (prefers-color-scheme: dark) {
+        .logo-primary {
+          fill: #ffffff;
+        }
+        .logo-secondary {
+          fill: #ffffff;
+        }
+        .logo-text {
+          fill: #000000;
+        }
+      }
+    </style>
+  </defs>
+  
+  <!-- Globe/Circle background -->
+  <circle cx="16" cy="16" r="14" class="logo-primary" />
+  
+  <!-- Globe lines for international theme -->
+  <path d="M2 16 C2 16, 8 12, 16 12 C24 12, 30 16, 30 16" class="logo-secondary" stroke-width="1" fill="none" stroke="currentColor" opacity="0.3"/>
+  <path d="M2 16 C2 16, 8 20, 16 20 C24 20, 30 16, 30 16" class="logo-secondary" stroke-width="1" fill="none" stroke="currentColor" opacity="0.3"/>
+  <line x1="16" y1="2" x2="16" y2="30" class="logo-secondary" stroke-width="1" stroke="currentColor" opacity="0.3"/>
+  
+  <!-- UGS Text -->
+  <text x="16" y="20" text-anchor="middle" class="logo-text" font-family="Arial, sans-serif" font-size="9" font-weight="bold">UGS</text>
+</svg>

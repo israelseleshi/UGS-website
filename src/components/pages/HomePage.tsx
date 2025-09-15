@@ -55,10 +55,10 @@ export function HomePage({ onPageChange }: HomePageProps) {
   ];
 
   const stats = [
-    { number: '50,000+', label: 'Visas Processed', icon: CheckCircle },
-    { number: '120+', label: 'Countries Covered', icon: Globe },
-    { number: '15+', label: 'Years Experience', icon: Clock },
-    { number: '98%', label: 'Success Rate', icon: Star }
+    { number: '0+', label: 'Visas Processed', icon: CheckCircle },
+    { number: '0+', label: 'Countries Covered', icon: Globe },
+    { number: '0+', label: 'Years Experience', icon: Clock },
+    { number: '0%', label: 'Success Rate', icon: Star }
   ];
 
   return (

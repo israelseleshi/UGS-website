@@ -243,6 +243,7 @@ export async function ensureBaseCollections() {
   const placeholders: Array<[string, string, Record<string, any>]> = [
     ["users", "_seed", { _type: "seed", createdAt: now }],
     ["visaApplications", "_seed", { _type: "seed", createdAt: now }],
+    ["tradeLicenseApplications", "_seed", { _type: "seed", createdAt: now }],
     ["visaEdRegistrations", "_seed", { _type: "seed", createdAt: now }],
     ["documents", "_seed", { _type: "seed", createdAt: now }],
     ["payments", "_seed", { _type: "seed", createdAt: now }],
@@ -443,6 +444,96 @@ export async function submitVisaApplication(applicationData: Partial<VisaApplica
     updatedAt: serverTimestamp()
   });
   return docRef.id;
+}
+
+// Trade License Applications
+export type TradeLicenseApplication = {
+  uid: string;
+  userEmail?: string;
+  status: "pending" | "in_review" | "approved" | "rejected";
+  priority?: "normal" | "medium" | "high";
+  estimatedCost?: number;
+  
+  businessName: string;
+  businessType: string;
+  industry: string;
+  businessDescription: string;
+  preferredCountry: string;
+  preferredCity: string;
+  businessAddress: string;
+  ownershipStructure: string;
+  numberOfPartners?: string;
+  authorizedCapital: string;
+  paidUpCapital: string;
+  contactPerson: string;
+  contactEmail: string;
+  contactPhone: string;
+  
+  additionalServices: {
+    bankingAssistance: boolean;
+    taxCompliance: boolean;
+    ongoingCompliance: boolean;
+    corporateGovernance: boolean;
+  };
+  
+  processingSpeed: string;
+  submittedAt: Date;
+  createdAt?: any;
+  updatedAt?: any;
+};
+
+export async function createTradeLicenseApplication(uid: string, data: Partial<TradeLicenseApplication>) {
+  const colRef = collection(getDb(), "tradeLicenseApplications");
+  const docRef = await addDoc(colRef, {
+    uid,
+    status: "pending",
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    ...data,
+  });
+  const snap = await getDoc(docRef);
+  return { id: docRef.id, ...(snap.data() as TradeLicenseApplication) };
+}
+
+export async function updateTradeLicenseApplication(appId: string, data: Partial<TradeLicenseApplication>) {
+  const ref = doc(getDb(), "tradeLicenseApplications", appId);
+  await updateDoc(ref, { ...data, updatedAt: serverTimestamp() });
+}
+
+export async function getTradeLicenseApplication(appId: string) {
+  const ref = doc(getDb(), "tradeLicenseApplications", appId);
+  const snap = await getDoc(ref);
+  return snap.exists() ? ({ id: appId, ...(snap.data() as TradeLicenseApplication) }) : null;
+}
+
+export async function listUserTradeLicenseApplications(uid: string, pageSize = 20) {
+  const q = query(
+    collection(getDb(), "tradeLicenseApplications"),
+    where("uid", "==", uid),
+  );
+  const snap = await getDocs(q);
+  const items = snap.docs
+    .map((d) => ({ id: d.id, ...(d.data() as TradeLicenseApplication) }))
+    .sort((a, b) => {
+      const ta = (a.createdAt as any)?.toMillis?.() ?? (a as any)?.createdAt?.seconds ?? 0;
+      const tb = (b.createdAt as any)?.toMillis?.() ?? (b as any)?.createdAt?.seconds ?? 0;
+      return tb - ta; // newest first
+    })
+    .slice(0, pageSize);
+  return { items, nextCursor: undefined as any };
+}
+
+export async function listAllTradeLicenseApplications(pageSize = 50, cursor?: QueryDocumentSnapshot) {
+  const baseQuery = query(
+    collection(getDb(), "tradeLicenseApplications"),
+    orderBy("createdAt", "desc"),
+    limit(pageSize),
+  );
+  const q = cursor ? query(baseQuery, startAfter(cursor)) : baseQuery;
+  const snap = await getDocs(q);
+  const items = snap.docs.map((d) => ({ id: d.id, ...(d.data() as TradeLicenseApplication) }));
+  const nextCursor = snap.docs[snap.docs.length - 1];
+  return { items, nextCursor };
 }
 
 // --- Admin Maintenance ---
