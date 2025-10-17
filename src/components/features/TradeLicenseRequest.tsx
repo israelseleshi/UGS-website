@@ -587,7 +587,7 @@ export function TradeLicenseRequest({ onPageChange }: TradeLicenseRequestProps) 
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+      <div className="site-container site-max py-6 md:py-8">
         {/* Header */}
         <div className="flex flex-col md:flex-row items-center justify-between mb-6 md:mb-8 space-y-4 md:space-y-0">
           <Button
@@ -609,11 +609,10 @@ export function TradeLicenseRequest({ onPageChange }: TradeLicenseRequestProps) 
           <div className="w-24 hidden md:block" /> {/* Spacer for centering */}
         </div>
         
-        {/* The change is here: 'max-w-4xl' instead of 'max-w-2xl' */}
+        {/* Form Content */}
         <div className="max-w-4xl mx-auto">
-          <div className="mx-6 md:mx-8 lg:mx-12">
-            <Card className="shadow-2xl border-0 bg-card/95 backdrop-blur-sm">
-            <CardContent className="p-8 md:p-12">
+          <Card className="shadow-2xl border-0 bg-card/95 backdrop-blur-sm">
+            <CardContent className="p-6 md:p-8">
               {renderProgressIndicator()}
 
               {/* Validation Errors */}
@@ -692,7 +691,6 @@ export function TradeLicenseRequest({ onPageChange }: TradeLicenseRequestProps) 
               </div>
             </CardContent>
           </Card>
-          </div>
         </div>
       </div>
     </div>

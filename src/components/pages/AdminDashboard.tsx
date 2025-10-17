@@ -449,9 +449,12 @@ export function AdminDashboard({ onPageChange, onLogout }: AdminDashboardProps) 
                 <Menu className="w-6 h-6" />
               </Button>
               <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-gradient-to-br from-primary to-red-600 rounded-lg flex items-center justify-center">
-                  <Globe className="w-5 h-5 text-white" />
-                </div>
+                <img 
+                  src="/ugs-logo.png" 
+                  alt="UGS Logo" 
+                  className="w-8 h-8 object-contain dark:brightness-0 dark:invert hover:dark:brightness-100 hover:dark:invert-0 transition-all duration-300 ease-in-out cursor-pointer"
+                  onClick={() => onPageChange('home')}
+                />
                 <div>
                   <h1 className="text-lg font-bold">UGS Admin</h1>
                   <p className="text-xs text-muted-foreground">Control Center</p>

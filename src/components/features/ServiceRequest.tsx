@@ -41,7 +41,7 @@ interface ServiceRequestProps {
 
 export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
   const { user } = useAuth();
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(2);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     // Personal Information
@@ -90,17 +90,6 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
   };
 
   // Validation functions for each step
-  const validateStep1 = (): boolean => {
-    const errors: string[] = [];
-    
-    if (!formData.serviceType) {
-      errors.push('Please select a service type');
-    }
-    
-    setValidationErrors(errors);
-    return errors.length === 0;
-  };
-
   const validateStep2 = (): boolean => {
     const errors: string[] = [];
     
@@ -177,24 +166,18 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
     
     // Validate current step before proceeding
     switch (currentStep) {
-      case 1:
-        isValid = validateStep1();
-        break;
       case 2:
         isValid = validateStep2();
         break;
       case 3:
         isValid = validateStep3();
         break;
-      case 4:
-        isValid = validateStep4();
-        break;
       default:
         isValid = true;
     }
     
     if (isValid && currentStep < 4) {
-      setCurrentStep(currentStep + 1);
+      setCurrentStep(prev => prev + 1);
       setValidationErrors([]); // Clear errors when moving to next step
     } else if (!isValid) {
       // Show toast notification for validation errors
@@ -203,8 +186,8 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
   };
 
   const handlePrevious = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
+    if (currentStep > 2) {
+      setCurrentStep(prev => prev - 1);
     }
   };
 
@@ -242,7 +225,6 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
         
         // Travel Details
         travel: {
-          serviceType: formData.serviceType,
           destination: formData.destinationCountry,
           purpose: formData.purposeOfTravel,
           travelDate: formData.travelDate,
@@ -290,13 +272,7 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
   };
   
   const calculateEstimatedCost = () => {
-    const serviceType = services.find(s => s.id === formData.serviceType);
     let baseCost = 199; // Default base cost
-    
-    if (serviceType?.id === 'business') baseCost = 299;
-    else if (serviceType?.id === 'student') baseCost = 499;
-    else if (serviceType?.id === 'work') baseCost = 799;
-    else if (serviceType?.id === 'immigration') baseCost = 1299;
     
     let additionalCost = 0;
     if (formData.processingSpeed === 'express') additionalCost += 199;
@@ -307,132 +283,8 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
     return baseCost + additionalCost;
   };
 
-  const services = [
-    { 
-      id: 'tourist', 
-      title: 'Tourist Visa', 
-      price: 'From ETB 199', 
-      time: '5-10 days',
-      description: 'For leisure and tourism purposes',
-      image: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=1200&auto=format&fit=crop'
-    },
-    { 
-      id: 'business', 
-      title: 'Business Visa', 
-      price: 'From ETB 299', 
-      time: '7-15 days',
-      description: 'For business meetings and conferences',
-      image: 'https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?q=80&w=1200&auto=format&fit=crop'
-    },
-    { 
-      id: 'student', 
-      title: 'Student Visa', 
-      price: 'From ETB 499', 
-      time: '2-8 weeks',
-      description: 'For educational purposes',
-      image: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?q=80&w=1200&auto=format&fit=crop'
-    },
-    { 
-      id: 'work', 
-      title: 'Work Visa', 
-      price: 'From ETB 799', 
-      time: '4-12 weeks',
-      description: 'For employment opportunities',
-      image: 'https://images.unsplash.com/photo-1521791136064-7986c2920216?q=80&w=1200&auto=format&fit=crop'
-    },
-    { 
-      id: 'immigration', 
-      title: 'Immigration Services', 
-      price: 'From ETB 1299', 
-      time: '6+ months',
-      description: 'For permanent residency',
-      image: 'https://images.unsplash.com/photo-1483728642387-6c3bdd6c93e5?q=80&w=1200&auto=format&fit=crop'
-    },
-    { 
-      id: 'other', 
-      title: 'Other Services', 
-      price: 'Custom Quote', 
-      time: 'Varies',
-      description: 'Specialized visa services',
-      image: 'https://images.unsplash.com/photo-1496302662116-35cc4f36df92?q=80&w=1200&auto=format&fit=crop'
-    }
-  ];
-
-
   const renderStepContent = () => {
     switch (currentStep) {
-      case 1:
-        return (
-          <div className="space-y-6">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold mb-2">Service Selection</h2>
-              <p className="text-muted-foreground">Choose the visa service that best fits your needs</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {services.map((service) => (
-                <Card 
-                  key={service.id}
-                  className={`cursor-pointer transition-all hover:shadow-md ${
-                    formData.serviceType === service.id 
-                      ? 'ring-2 ring-primary border-primary' 
-                      : ''
-                  }`}
-                  onClick={() => handleInputChange('serviceType', service.id)}
-                >
-                  <CardContent className="p-6">
-                    {/* Visual banner with decorative background shapes */}
-                    <div className="relative mb-5">
-                      {/* background shape 1 */}
-                      <div className="absolute -top-3 -left-3 h-24 w-32 md:h-28 md:w-40 rounded-2xl rotate-[-6deg] bg-indigo-600/20 dark:bg-indigo-500/15 blur-[1px]" aria-hidden="true"></div>
-                      {/* background shape 2 */}
-                      <div className="absolute -bottom-3 -right-3 h-24 w-32 md:h-28 md:w-40 rounded-2xl rotate-[8deg] bg-blue-600/20 dark:bg-blue-500/15" aria-hidden="true"></div>
-
-                      <div className="relative rounded-2xl overflow-hidden shadow-sm ring-1 ring-black/5 dark:ring-white/5">
-                        <AspectRatio ratio={16/9}>
-                          <ImageWithFallback
-                            src={cldFetch(service.image, { w: 1200 })}
-                            fallbackSrc={service.image}
-                            alt={`${service.title} illustrative image`}
-                            className="h-full w-full object-cover"
-                            loading="lazy"
-                            referrerPolicy="no-referrer"
-                          />
-                        </AspectRatio>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h3 className="font-semibold text-lg">{service.title}</h3>
-                        <p className="text-sm text-muted-foreground mb-2">{service.description}</p>
-                      </div>
-                      <div className="flex items-center">
-                        <input
-                          type="radio"
-                          checked={formData.serviceType === service.id}
-                          onChange={() => handleInputChange('serviceType', service.id)}
-                          className="w-4 h-4 text-primary"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <Badge variant="outline" className="flex items-center">
-                        <DollarSign className="w-3 h-3 mr-1" />
-                        {service.price}
-                      </Badge>
-                      <Badge variant="secondary" className="flex items-center">
-                        <Clock className="w-3 h-3 mr-1" />
-                        {service.time}
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        );
-
       case 2:
         return (
           <div className="space-y-6">
@@ -814,10 +666,6 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex justify-between">
-                  <span>Service Type:</span>
-                  <span className="font-medium">{services.find(s => s.id === formData.serviceType)?.title || 'Not selected'}</span>
-                </div>
-                <div className="flex justify-between">
                   <span>Destination:</span>
                   <span className="font-medium">{formatCountryDisplay(formData.destinationCountry) || 'Not specified'}</span>
                 </div>
@@ -930,15 +778,14 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
         {/* Progress Indicator */}
         <div className="max-w-4xl mx-auto mb-8">
           <div className="flex items-center justify-between mb-4">
-            <div className="text-sm font-medium">Step {currentStep} of 4</div>
+            <div className="text-sm font-medium">Step {currentStep - 1} of 3</div>
             <div className="text-sm text-muted-foreground">
-              {currentStep === 1 && 'Service Selection'}
               {currentStep === 2 && 'Personal Information'}
               {currentStep === 3 && 'Travel Details'}
               {currentStep === 4 && 'Review & Submit'}
             </div>
           </div>
-          <Progress value={(currentStep / 4) * 100} className="h-2" />
+          <Progress value={((currentStep - 1) / 3) * 100} className="h-2" />
         </div>
 
         {/* Form Content */}
@@ -971,7 +818,7 @@ export function ServiceRequest({ onPageChange }: ServiceRequestProps) {
                     type="button"
                     variant="outline" 
                     onClick={handlePrevious}
-                    disabled={currentStep === 1}
+                    disabled={currentStep === 2}
                     className="flex items-center"
                   >
                     <ArrowLeft className="w-4 h-4 mr-2" />

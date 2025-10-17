@@ -136,30 +136,15 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
       <div className="absolute inset-0 bg-muted/30 dark:bg-muted/20" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/5 via-background/80 to-muted/40 dark:from-primary/10 dark:via-background/90 dark:to-muted/20" />
 
-      {/* Left side - Form */}
+      {/* Main Content */}
       <div className="flex-1 flex items-center justify-center px-6 sm:px-8 lg:px-12 py-8 relative z-10">
         <div className="w-full max-w-md">
-          {/* Logo */}
-          <div className="flex items-center space-x-3 mb-8">
-            <div className="w-12 h-12 bg-gradient-to-br from-red-500 via-pink-500 to-orange-500 rounded-2xl flex items-center justify-center shadow-xl">
-              <Globe className="w-7 h-7 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                United Global Services
-              </h1>
-              <p className="text-sm bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent font-medium">
-                inspiring borderless thinking
-              </p>
-            </div>
-          </div>
-
           <div className="space-y-6">
             <div>
-              <h2 className="text-4xl md:text-5xl tracking-tight bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+              <h2 className="text-2xl md:text-3xl tracking-tight bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
                 {type === 'signin' ? 'Welcome back' : 'Create your account'}
               </h2>
-              <p className="text-lg md:text-xl mt-3 text-muted-foreground">
+              <p className="text-base md:text-lg mt-2 text-muted-foreground">
                 {type === 'signin' 
                   ? 'Sign in to access your portal'
                   : 'Create your account to get started'
@@ -210,7 +195,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
               {type === 'signin' && (
                 <div className="space-y-5">
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="text-sm">Email <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="email" className="text-base font-medium">Email <span className="text-red-500">*</span></Label>
                     <div className="relative">
                       <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                       <Input
@@ -226,7 +211,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="password" className="text-sm">Password <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="password" className="text-base font-medium">Password <span className="text-red-500">*</span></Label>
                     <div className="relative">
                       <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                       <Input
@@ -249,9 +234,9 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                           checked={formData.rememberMe}
                           onCheckedChange={(checked) => handleInputChange('rememberMe', checked as boolean)}
                         />
-                        <Label htmlFor="rememberMe" className="text-sm">Remember me</Label>
+                        <Label htmlFor="rememberMe" className="text-base">Remember me</Label>
                       </div>
-                      <Button type="button" onClick={() => setForgotOpen(true)} variant="link" className="px-0 text-xs bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent">Forgot password?</Button>
+                      <Button type="button" onClick={() => setForgotOpen(true)} variant="link" className="px-0 text-sm text-primary hover:text-primary/80">Forgot password?</Button>
                     </div>
                   </div>
                 </div>
@@ -262,7 +247,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                   {/* Names (required) */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="firstName" className="text-sm">First name <span className="text-red-500">*</span></Label>
+                      <Label htmlFor="firstName" className="text-base font-medium">First name <span className="text-red-500">*</span></Label>
                       <div className="relative">
                         <User className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                         <Input
@@ -276,7 +261,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="lastName" className="text-sm">Last name <span className="text-red-500">*</span></Label>
+                      <Label htmlFor="lastName" className="text-base font-medium">Last name <span className="text-red-500">*</span></Label>
                       <div className="relative">
                         <User className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                         <Input
@@ -293,7 +278,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
 
                   {/* Email (required) */}
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="text-sm">Email <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="email" className="text-base font-medium">Email <span className="text-red-500">*</span></Label>
                     <div className="relative">
                       <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                       <Input
@@ -310,7 +295,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
 
                   {/* Password (required) */}
                   <div className="space-y-2">
-                    <Label htmlFor="password" className="text-sm">Password <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="password" className="text-base font-medium">Password <span className="text-red-500">*</span></Label>
                     <div className="relative">
                       <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                       <Input
@@ -330,7 +315,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
 
                   {/* Confirm Password (required) */}
                   <div className="space-y-2">
-                    <Label htmlFor="confirmPassword" className="text-sm">Confirm password <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="confirmPassword" className="text-base font-medium">Confirm password <span className="text-red-500">*</span></Label>
                     <div className="relative">
                       <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                       <Input
@@ -350,7 +335,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
 
                   {/* Phone (optional) */}
                   <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-sm">Phone (optional)</Label>
+                    <Label htmlFor="phone" className="text-base font-medium">Phone (optional)</Label>
                     <div className="relative">
                       <Phone className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                       <Input
@@ -373,13 +358,13 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                         onCheckedChange={(checked) => handleInputChange('agreeToTerms', checked as boolean)}
                         required
                       />
-                      <Label htmlFor="terms" className="text-sm leading-relaxed">
+                      <Label htmlFor="terms" className="text-base leading-relaxed">
                         I agree to UGS's{' '}
-                        <button type="button" onClick={() => setTosOpen(true)} className="px-0 text-sm h-auto p-0 bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent underline">
+                        <button type="button" onClick={() => setTosOpen(true)} className="px-0 text-base h-auto p-0 text-primary hover:text-primary/80 underline">
                           Terms of Service
                         </button>{' '}
                         and{' '}
-                        <button type="button" onClick={() => setPrivacyOpen(true)} className="px-0 text-sm h-auto p-0 bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent underline">
+                        <button type="button" onClick={() => setPrivacyOpen(true)} className="px-0 text-base h-auto p-0 text-primary hover:text-primary/80 underline">
                           Privacy Policy
                         </button>
                       </Label>
@@ -390,7 +375,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
                         checked={formData.newsletterOptIn}
                         onCheckedChange={(checked) => handleInputChange('newsletterOptIn', checked as boolean)}
                       />
-                      <Label htmlFor="newsletter" className="text-sm">
+                      <Label htmlFor="newsletter" className="text-base">
                         Send me updates and offers
                       </Label>
                     </div>
@@ -401,7 +386,7 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
               <div>
                 <Button 
                   type="submit" 
-                  className="w-full bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 shadow-lg" 
+                  className="w-full" 
                   size="lg"
                   disabled={isLoading || authLoading}
                 >
@@ -418,12 +403,12 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
 
               {/* Removed social sign-in to enforce Gmail-only email/password + OTP flow */}
 
-              <div className="text-center text-sm text-gray-600 dark:text-gray-400">
+              <div className="text-center text-base text-gray-600 dark:text-gray-400">
                 {type === 'signin' ? "Don't have an account? " : 'Already have an account? '}
                 <div>
                   <Button 
                     variant="link" 
-                    className="px-0 text-sm h-auto p-0 bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent font-semibold"
+                    className="px-0 text-base h-auto p-0 text-primary hover:text-primary/80 font-semibold"
                     onClick={() => onPageChange(type === 'signin' ? 'signup' : 'signin')}
                   >
                     {type === 'signin' ? 'Create an account' : 'Sign in to your account'}
@@ -434,8 +419,6 @@ export function AuthPages({ type, onPageChange, onAdminLogin, onUserLogin }: Aut
           </div>
         </div>
       </div>
-
-      {/* Right side removed to keep a single centered column layout */}
 
       {/* Terms of Service Dialog */}
       <Dialog open={tosOpen} onOpenChange={setTosOpen}>

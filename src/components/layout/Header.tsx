@@ -64,8 +64,9 @@ export function Header({ currentPage, onPageChange, theme, onThemeChange, isAdmi
     { name: 'Home', id: 'home' },
     { name: 'Services', id: 'services' },
     { name: 'VisaEd', id: 'visaed' },
-    { name: 'About', id: 'about' },
-    { name: 'Allen AI', id: 'allen' }
+    { name: 'Allen AI', id: 'allen' },
+    { name: 'News', id: 'news' },
+    { name: 'About', id: 'about' }
   ];
 
   return (
@@ -77,7 +78,7 @@ export function Header({ currentPage, onPageChange, theme, onThemeChange, isAdmi
             <img 
               src="/ugs-logo.png" 
               alt="UGS Logo" 
-              className="w-36 h-36 md:w-34 md:h-34 object-contain dark:brightness-0 dark:invert hover:dark:brightness-100 hover:dark:invert-0 transition-all duration-300 ease-in-out cursor-pointer"
+              className="w-44 h-44 md:w-48 md:h-48 object-contain dark:brightness-0 dark:invert hover:dark:brightness-100 hover:dark:invert-0 transition-all duration-300 ease-in-out cursor-pointer"
             />
           </div>
 

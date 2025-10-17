@@ -34,6 +34,7 @@ const AdminDashboard = lazy(() => import('./components/pages/AdminDashboard').th
 const ClientDashboard = lazy(() => import('./components/pages/ClientDashboard').then(m => ({ default: m.ClientDashboard })));
 const VerifyEmail = lazy(() => import('./components/pages/VerifyEmail').then(m => ({ default: m.VerifyEmail })));
 const CourseDetailsPage = lazy(() => import('./components/pages/CourseDetailsPage').then(m => ({ default: m.CourseDetailsPage })));
+const NewsUpdatesPage = lazy(() => import('./components/pages/NewsUpdatesPage').then(m => ({ default: m.NewsUpdatesPage })));
 
 // Basic error boundary to surface runtime errors instead of a blank screen
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { error: any }> {
@@ -186,7 +187,7 @@ export default function App() {
           'Visa renewal services',
           'Travel insurance assistance'
         ],
-        image: 'https://images.unsplash.com/photo-1721138942121-a26751b520b5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwYXNzcG9ydCUyMHRyYXZlbCUyMHZpc2ElMjBkb2N1bWVudHN8ZW58MXx8fHwxNzU1NTk2NjAxfDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
+        image: 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1200&q=80',
         cta: 'Apply for Tourist Visa'
       },
       {
@@ -201,7 +202,7 @@ export default function App() {
           'Relocation planning',
           'Legal documentation assistance'
         ],
-        image: 'https://images.unsplash.com/photo-1666790676906-0295230c121d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBvZmZpY2UlMjBidXNpbmVzc3xlbnwxfHx8fDE3NTU1ODI2NDB8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
+        image: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1200&q=80',
         cta: 'Start Immigration Process'
       },
       {
@@ -216,7 +217,7 @@ export default function App() {
           'Corporate governance support',
           'Ongoing compliance management'
         ],
-        image: 'https://images.unsplash.com/photo-1666790676906-0295230c121d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBvZmZpY2UlMjBidXNpbmVzc3xlbnwxfHx8fDE3NTU1ODI2NDB8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
+        image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1200&q=80',
         cta: 'Setup Business'
       },
       {
@@ -244,47 +245,20 @@ export default function App() {
         className="min-h-screen no-hscroll"
       >
         {/* Hero Section */}
-        <section className="py-24 md:py-28 bg-gradient-to-b from-primary/5 via-background to-transparent dark:from-primary/10 dark:via-background dark:to-transparent">
+        <section className="py-16 md:py-20 bg-gradient-to-b from-primary/5 via-background to-transparent dark:from-primary/10 dark:via-background dark:to-transparent">
           <div className="site-container site-max text-center">
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-4xl md:text-5xl font-bold mb-6"
+              className="text-4xl md:text-5xl font-bold"
             >
               Our Services
             </motion.h1>
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="text-xl text-muted-foreground max-w-3xl mx-auto mb-10"
-            >
-              Comprehensive visa and immigration solutions designed to make your global journey seamless and successful
-            </motion.p>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="flex items-center justify-center space-x-8 text-sm text-muted-foreground"
-            >
-              <div className="flex items-center">
-                <Globe className="w-4 h-4 mr-2 text-primary" />
-                120+ Countries
-              </div>
-              <div className="flex items-center">
-                <Users className="w-4 h-4 mr-2 text-primary" />
-                50,000+ Clients
-              </div>
-              <div className="flex items-center">
-                <Award className="w-4 h-4 mr-2 text-primary" />
-                98% Success Rate
-              </div>
-            </motion.div>
           </div>
         </section>
 
         {/* Services Detail */}
-        <section className="pt-16 pb-28 md:pt-20 md:pb-32">
+        <section className="pt-8 pb-28 md:pt-12 md:pb-32">
           <div className="site-container site-max">
             <div className="space-y-24 md:space-y-28">
               {services.map((service, index) => (
@@ -379,53 +353,6 @@ export default function App() {
           </div>
         </section>
 
-        {/* CTA Section */}
-        <section className="py-24 md:py-28 bg-muted/30">
-          <div className="site-container site-max text-center">
-            <motion.h2
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-3xl md:text-4xl font-bold mb-4"
-            >
-              Ready to Get Started?
-            </motion.h2>
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto"
-            >
-              Our expert team is here to guide you through every step of your visa application process
-            </motion.p>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="flex flex-col sm:flex-row gap-4 justify-center"
-            >
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button 
-                  size="lg" 
-                  onClick={() => setCurrentPage('request')}
-                  className="px-8"
-                >
-                  Request Service
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </Button>
-              </motion.div>
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button 
-                  variant="outline" 
-                  size="lg"
-                  onClick={() => setCurrentPage('signup')}
-                  className="px-8"
-                >
-                  Create Account
-                </Button>
-              </motion.div>
-            </motion.div>
-          </div>
-        </section>
         </motion.div>
       );
     };
@@ -550,6 +477,7 @@ export default function App() {
       'services': <ServicesPage />,
       'about': <AboutPage />,
       'visaed': <VisaEdPage onPageChange={setCurrentPage} />,
+      'news': <NewsUpdatesPage onPageChange={setCurrentPage} />,
       'allen': <AllenAI onPageChange={setCurrentPage} />,
       'signin': <AuthPages type="signin" onPageChange={setCurrentPage} onAdminLogin={handleAdminLogin} onUserLogin={handleUserLogin} />,
       'signup': <AuthPages type="signup" onPageChange={setCurrentPage} onUserLogin={handleUserLogin} />,
@@ -625,7 +553,7 @@ export default function App() {
                     <img 
                       src="/ugs-logo.png" 
                       alt="UGS Logo" 
-                      className="w-24 h-24 md:w-28 md:h-28 object-contain dark:brightness-0 dark:invert hover:dark:brightness-100 hover:dark:invert-0 transition-all duration-300 ease-in-out cursor-pointer"
+                      className="w-44 h-44 md:w-48 md:h-48 object-contain dark:brightness-0 dark:invert hover:dark:brightness-100 hover:dark:invert-0 transition-all duration-300 ease-in-out cursor-pointer"
                     />
                   </motion.div>
                   <p className="text-sm text-muted-foreground">
